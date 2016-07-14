@@ -17,18 +17,25 @@ class BpixMountTool():
 
     def __init__(self):
 
-        self.UnsavedChanges = False
         self.globalConfig = ConfigParser.ConfigParser()
         self.globalConfig.read('config.ini')
         self.dataDirectoryBase = 'data/'
-        self.dataDirectory = self.dataDirectoryBase + self.globalConfig.get('System', 'DataRevision') + '/'
-        self.Operator = self.globalConfig.get('System', 'Operator')
+        self.revisionTag = ''
 
         try:
             self.DisplayWidth = int(self.globalConfig.get('System', 'DisplayWidth'))
         except:
             self.DisplayWidth = 80
 
+        self.InitializeModuleData()
+
+        self.Operator = self.globalConfig.get('System', 'Operator')
+        self.Log("started, operator: %s"%self.Operator, Category='START')
+
+
+    def InitializeModuleData(self):
+        self.UnsavedChanges = False
+        self.dataDirectory = self.dataDirectoryBase + self.globalConfig.get('System', 'DataRevision') + '/'
         if not os.path.isfile(self.dataDirectory + 'config.ini'):
 
             dataDirectories = [x.strip('/').split('/')[-1] for x in glob.glob(self.dataDirectoryBase + '*/')]
@@ -71,11 +78,15 @@ class BpixMountTool():
 
         self.ActiveLayer = self.config.get('Layers', 'ActiveLayer')
 
-        self.Log("started, operator: %s"%self.Operator, Category='START')
+        try:
+            self.revisionTag = self.config.get('Revision', 'Tag')
+        except:
+            self.revisionTag = ""
 
 
     def FlagUnsaved(self):
         self.UnsavedChanges = True
+
 
     def ShowError(self, Message):
         sys.stdout.write('\x1b[31m')
@@ -105,6 +116,13 @@ class BpixMountTool():
         self.globalConfig.read('config.ini')
 
 
+    def SaveLocalConfiguration(self):
+        with open(self.dataDirectory + 'config.ini', 'wb') as configfile:
+            self.config.write(configfile)
+
+        self.config.read(self.dataDirectory + 'config.ini')
+
+
     def SaveConfiguration(self):
         Success = True
         for LayerName in self.LayerNames:
@@ -118,10 +136,7 @@ class BpixMountTool():
 
         try:
             self.config.set('Layers', 'ActiveLayer', self.ActiveLayer)
-            with open(self.dataDirectory + 'config.ini', 'wb') as configfile:
-                self.config.write(configfile)
-
-            self.config.read(self.dataDirectory + 'config.ini')
+            self.SaveLocalConfiguration()
         except:
             Success = False
 
@@ -178,7 +193,7 @@ class BpixMountTool():
                     dataRev = self.globalConfig.get('System', 'DataRevision')
                 except:
                     dataRev = '?'
-                revisionInfo = 'on REV {rev}, {status}'.format(rev=dataRev, status=revStatus)
+                revisionInfo = 'on REV {rev} "{tag}", {status}'.format(rev=dataRev, status=revStatus, tag=self.revisionTag)
             except:
                 raise
 
@@ -193,9 +208,12 @@ class BpixMountTool():
                             ['plan','View mounting _plan'],
                             ['log','Add _log entry'],
                             ['save', 'Sa_ve configuration'],
-                            ['step','Save configuration as new _revision'],
+                            ['step','Save configuration as new revision'],
+                            ['revs','Sho_w revisions'],
+                            ['selectrevs','Select _revision'],
+                            ['tagrevs','Set tag for this revision'],
                             ['select', '_Select Layer (active: %s)' % self.ActiveLayer],
-                            ['operator', 'Set operator (currently: %s)'%self.Operator],
+                            ['operator', 'Set _operator (currently: %s)'%self.Operator],
                             ['quit','_Quit']
                           ], DisplayWidth=self.DisplayWidth)
             if ret == 'plan':
@@ -208,6 +226,12 @@ class BpixMountTool():
                 self.EnterMountMenu()
             elif ret == 'log':
                 self.EnterLogMenu()
+            elif ret == 'revs':
+                self.EnterRevsMenu()
+            elif ret == 'selectrevs':
+                self.EnterSelectRevsMenu()
+            elif ret == 'tagrevs':
+                self.EnterTagRevsMenu()
             elif ret == 'save':
                 self.EnterSaveConfigurationMenu()
             elif ret == 'operator':
@@ -247,6 +271,109 @@ class BpixMountTool():
         while len(logString.strip()) > 0:
             self.Log(logString, Category='USER')
             logString = raw_input()
+
+
+    def getLastLine(self, fname, maxLineLength=80):
+        fp = file(fname, "rb")
+        fp.seek(-maxLineLength - 1, 2)  # 2 means "from the end of the file"
+        return fp.readlines()[-1]
+
+
+    def EnterRevsMenu(self):
+        self.PrintBox("configuration/data revisions")
+
+        dataDirectories = [x.strip('/').split('/')[-1] for x in glob.glob(self.dataDirectoryBase + '*/')]
+        headRevision = 1
+        if len(dataDirectories) > 0:
+            headRevision = max([int(x) for x in dataDirectories if x.isdigit()])
+
+        dataDirectories.sort(key=lambda x: int(x), reverse=True)
+        dataDirectories = dataDirectories[0:10]
+        for dataDirectory in dataDirectories:
+            DateString = '?'
+            try:
+                LL = self.getLastLine(self.dataDirectoryBase + dataDirectory + '/bpixm.log',200)
+                DateString = LL.split('[')[0]
+            except:
+                DateString = '?'
+
+            print " REV {Rev}: {Date} {Status}".format(Rev=dataDirectory,Status='(HEAD)' if int(dataDirectory)==headRevision else '',Date=DateString)
+
+
+    def EnterTagRevsMenu(self):
+        self.PrintBox("input new revision tag (current: %s)"%self.revisionTag)
+        self.revisionTag = raw_input()
+        self.config.set('Revision', 'Tag', self.revisionTag)
+        self.SaveLocalConfiguration()
+
+
+    def SwitchToRevision(self, newRevNr):
+        try:
+            dataDirectoryNew = self.dataDirectoryBase + '%d/' % int(newRevNr)
+
+            self.dataDirectory = dataDirectoryNew
+            self.globalConfig.set('System', 'DataRevision', int(newRevNr))
+            self.WriteGlobalConfig()
+            self.InitializeModuleData()
+            return True
+        except:
+            self.ShowError("Can't load REV %r" % newRevNr)
+            return False
+
+
+    def EnterSelectRevsMenu(self):
+        self.PrintBox("configuration/data revisions")
+
+        dataDirectories = [x.strip('/').split('/')[-1] for x in glob.glob(self.dataDirectoryBase + '*/')]
+        headRevision = 1
+        if len(dataDirectories) > 0:
+            headRevision = max([int(x) for x in dataDirectories if x.isdigit()])
+
+        dataDirectories.sort(key=lambda x: int(x), reverse=True)
+        dataDirectories = dataDirectories[0:10]
+        revs = [['input', 'input number...']]
+        for dataDirectory in dataDirectories:
+            DateString = '?'
+            try:
+                LL = self.getLastLine(self.dataDirectoryBase + dataDirectory + '/bpixm.log',200)
+                DateString = LL.split('[')[0]
+            except:
+                DateString = '?'
+
+            revs.append([dataDirectory, " REV {Rev}: {Date} {Status}".format(Rev=dataDirectory,Status='(HEAD)' if int(dataDirectory)==headRevision else '',Date=DateString)])
+
+        ret = AskUser("Select revision to return to", revs, DisplayWidth=self.DisplayWidth)
+        if ret == 'input':
+            self.PrintBox('Input revision number')
+            newRevNr = raw_input()
+        elif ret.isdigit():
+            newRevNr = int(ret)
+        else:
+            print "unable to switch to REV "
+            return False
+
+        # check for unsaved changes
+        OverwriteConfirmed = False
+        if self.UnsavedChanges:
+            self.ShowWarning("There are unsaved changes!")
+            ret = AskUser("do you really want to switch to another parameters revision?",
+                          [
+                              ['no', '_no'],
+                              ['yes', '_yes']
+                          ], DisplayWidth=self.DisplayWidth)
+
+            if ret == 'yes':
+                OverwriteConfirmed = True
+        else:
+            OverwriteConfirmed = True
+
+        if OverwriteConfirmed:
+            # switch back to revision
+            if self.SwitchToRevision(newRevNr):
+                #self.Log("switched back to this REV", Category="REV")
+                print "switched back to REV ", newRevNr
+            else:
+                print "could not switch back to REV ", newRevNr
 
 
     def PrintBox(self, text):
@@ -358,8 +485,7 @@ class BpixMountTool():
             print "|%s|"%(LadderString.ljust((self.DisplayWidth+7)))
             LadderIndex += 1
 
-        print "+%s+" % ('-' * (self.DisplayWidth-2))
-        print ""
+        print "+%s+\n" % ('-' * (self.DisplayWidth-2))
 
 
     def GetFormattedHalfLadder(self, HalfLadderModules):
@@ -456,6 +582,7 @@ class BpixMountTool():
 
         self.FlagUnsaved()
 
+
     def ClearHalfLadder(self, HalfLadderIndex):
 
         ret = AskUser("clear half ladder?",
@@ -470,6 +597,7 @@ class BpixMountTool():
                 self.LayersMounted[self.ActiveLayer].Modules[HalfLadderIndex[0]][ZPosition] = ''
             print "cleared!"
             self.FlagUnsaved()
+
 
     def EnterSelectLayerMenu(self):
         layerMenu = []
