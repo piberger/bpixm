@@ -394,7 +394,7 @@ class BpixMountTool():
                 textLine += textWord + ' '
             else:
                 textLines.append(textLine)
-                textLine = textWord
+                textLine = textWord + ' '
         if len(textLine) > 0:
             textLines.append(textLine)
 
@@ -502,6 +502,12 @@ class BpixMountTool():
         return ret
 
 
+    def GetActiveMountingLayer(self):
+        return self.LayersMounted[self.ActiveLayer]
+
+    def GetActivePlanLayer(self):
+        return self.Layers[self.ActiveLayer]
+
     def EnterMountMenu(self):
         os.system('clear')
 
@@ -509,10 +515,10 @@ class BpixMountTool():
         self.PrintBox("mounting plan for %s: select half ladder" % self.ActiveLayer)
 
         # Z positions
-        ZPositionsString = '           '
+        ZPositionsString = ' '*11
         for ZPosition in range(self.Layers[self.ActiveLayer].ZPositions):
             ZPositionsString += self.Layers[self.ActiveLayer].GetZPositionName(ZPosition)
-        ZPositionsString += '      '
+        ZPositionsString += ' '*6
         for ZPosition in range(self.Layers[self.ActiveLayer].ZPositions, 2*self.Layers[self.ActiveLayer].ZPositions):
             ZPositionsString += self.Layers[self.ActiveLayer].GetZPositionName(ZPosition)
         print ZPositionsString
@@ -530,12 +536,18 @@ class BpixMountTool():
             HeaderColumn.append(("L%d"%LadderIndex).ljust(5))
             LadderIndex += 1
 
-
+        # ask user to pick a half ladder
         selectedHalfLadderIndex = AskUser2D('', HalfLadderChoices, HeaderColumn=HeaderColumn)
 
-        selectedHalfLadderString = self.GetFormattedHalfLadder( self.LayersMounted[self.ActiveLayer].Modules[selectedHalfLadderIndex[0]][0+selectedHalfLadderIndex[1]*self.LayersMounted[self.ActiveLayer].ZPositions:(selectedHalfLadderIndex[1]+1)*self.LayersMounted[self.ActiveLayer].ZPositions])
-        toBeMountedHalfLadderString = self.GetFormattedHalfLadder( self.Layers[self.ActiveLayer].Modules[selectedHalfLadderIndex[0]][0+selectedHalfLadderIndex[1]*self.Layers[self.ActiveLayer].ZPositions:(selectedHalfLadderIndex[1]+1)*self.Layers[self.ActiveLayer].ZPositions])
+        # check for modules already mounted on that half ladder
+        selectedHalfLadderModules = self.GetActiveMountingLayer().GetHalfLadderModulesFromIndex(selectedHalfLadderIndex)
+        selectedHalfLadderString = self.GetFormattedHalfLadder(selectedHalfLadderModules)
 
+        # check modules planned to be mounted on that half ladder
+        toBeMountedHalfLadderModules = self.GetActivePlanLayer().GetHalfLadderModulesFromIndex(selectedHalfLadderIndex)
+        toBeMountedHalfLadderString = self.GetFormattedHalfLadder(toBeMountedHalfLadderModules)
+
+        # display modules list and ask user how to continue
         ret = AskUser(["SELECTED HALF-LADDER: %s:"%selectedHalfLadderString,
                        "MOUNTING PLAN:        %s"%toBeMountedHalfLadderString],
                       [
@@ -555,35 +567,104 @@ class BpixMountTool():
             return False
 
 
+    def VerifyModuleID(self, ModuleID, CheckLadderIndex, CheckZIndex):
+        #print "VERIFY:", ModuleID, "/", CheckLadderIndex, "/", CheckZIndex
+
+        if len(ModuleID.strip()) < 1:
+            return True
+
+        alreadyMountedPositions = []
+        for LadderIndex, Ladder in enumerate(self.GetActiveMountingLayer().Modules):
+            for ZIndex, MountedModuleID in enumerate(Ladder):
+                if MountedModuleID == ModuleID:
+                    if CheckLadderIndex==LadderIndex and CheckZIndex==ZIndex:
+                        print "Module {Module} already mounted here! => continue!".format(Module=ModuleID)
+                    else:
+                        alreadyMountedPositions.append("Ladder {Ladder}, Z {ZIndex}".format(Ladder=LadderIndex, ZIndex=ZIndex))
+
+        if len(alreadyMountedPositions)>0:
+            print "ModuleID already mounted at: ", "; ".join(alreadyMountedPositions)
+            return False
+        else:
+            return True
+
+
+    def MountModule(self, MountingLayer, LadderIndex, ZPosition, newModuleID, PlannedLayer = None):
+
+        success = False
+        try:
+            if len(MountingLayer.Modules[LadderIndex][ZPosition]) < 1:
+                logString = "mount module  -> " + newModuleID
+            else:
+                logString = "replace module " + MountingLayer.Modules[LadderIndex][ZPosition] + ' -> ' + newModuleID
+            if PlannedLayer:
+                plannedModule = PlannedLayer.Modules[LadderIndex][ZPosition]
+                logString += ' plan: ' + plannedModule
+            MountingLayer.Modules[LadderIndex][ZPosition] = newModuleID
+            success = True
+        except:
+            pass
+
+        self.Log(logString, 'MOUNT-MODULE')
+        return success
+
+
     def EnterScanHalfLadderMenu(self, HalfLadderIndex):
 
         # pick active layer for mounting
-        MountingLayer = self.LayersMounted[self.ActiveLayer]
-        PlannedLayer = self.Layers[self.ActiveLayer]
-
+        MountingLayer = self.GetActiveMountingLayer()
+        PlannedLayer = self.GetActivePlanLayer()
 
         # scan through all module slots in half-ladder
         for ZPosition in range(HalfLadderIndex[1] * MountingLayer.ZPositions,
                                (HalfLadderIndex[1] + 1) * MountingLayer.ZPositions):
             oldModuleID = MountingLayer.FormatModuleName(MountingLayer.Modules[HalfLadderIndex[0]][ZPosition])
             plannedModuleID = PlannedLayer.FormatModuleName(PlannedLayer.Modules[HalfLadderIndex[0]][ZPosition])
-            question = "Scan module ID to replace '{old}' (plan {plan}): ".format(old=oldModuleID, plan=plannedModuleID)
-            print question
-            newModuleID = raw_input()
-            if len(MountingLayer.Modules[HalfLadderIndex[0]][ZPosition]) < 1:
-                logString = "mount module  -> " + newModuleID
-            else:
-                logString = "replace module " + MountingLayer.Modules[HalfLadderIndex[0]][ZPosition] + ' -> ' + newModuleID
-            plannedModule = PlannedLayer.Modules[HalfLadderIndex[0]][ZPosition]
-            logString += ' plan: ' + plannedModule
-            MountingLayer.Modules[HalfLadderIndex[0]][ZPosition] = newModuleID
-            self.Log(logString, 'MOUNT-MODULE')
 
-            # check if it was planned to mount the module here
-            if newModuleID != plannedModule:
-                warningMessage = "mounted module '%s' instead of '%s' at position z=%s" % (
-                newModuleID, plannedModule, MountingLayer.GetZPositionName(ZPosition))
-                self.ShowWarning(warningMessage)
+
+            ModuleMountComplete = False
+            while not ModuleMountComplete:
+
+                # ask user for module ID
+                question = "Scan module ID to replace '{old}' (plan {plan}): ".format(old=oldModuleID, plan=plannedModuleID)
+                print question
+                newModuleID = raw_input()
+
+                # check if module is mountable _here_
+                isMountable = self.VerifyModuleID(newModuleID, HalfLadderIndex[0], ZPosition)
+
+                if isMountable:
+                    # check if it was _planned_ to mount the module here
+                    if newModuleID != plannedModuleID:
+                        warningMessage = "planning to mount module '%s' instead of '%s' at position z=%s" % (
+                            newModuleID, plannedModuleID, MountingLayer.GetZPositionName(ZPosition))
+                        self.ShowWarning(warningMessage)
+                        ret = AskUser("continue",
+                                      [
+                                          ['no', '_no'],
+                                          ['yes', '_yes']
+                                      ], DisplayWidth=self.DisplayWidth)
+                        if ret != 'yes':
+                            isMountable = False
+                else:
+                    self.ShowWarning("This module is already mounted in another position, can't use it a second time!")
+
+                if isMountable:
+                    # mount module
+                    if self.MountModule(MountingLayer=self.GetActiveMountingLayer(),
+                                     LadderIndex=HalfLadderIndex[0],
+                                     ZPosition=ZPosition,
+                                     newModuleID=newModuleID,
+                                     PlannedLayer=self.GetActivePlanLayer()
+                                     ):
+                        print "->mounted"
+                        ModuleMountComplete = True
+                    else:
+                        self.ShowWarning("Could not mount the module here! Enter Module ID again!")
+
+                else:
+                    print "Enter Module ID again!"
+
 
         self.FlagUnsaved()
 

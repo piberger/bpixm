@@ -58,6 +58,12 @@ class BpixLayer:
             else:
                 return "M$$$$"
 
+    def GetHalfLadderModulesFromIndex(self, selectedHalfLadderIndex):
+        PhiIndex = selectedHalfLadderIndex[0]
+        ZIndexFrom = selectedHalfLadderIndex[1] * self.ZPositions
+        ZIndexTo = (selectedHalfLadderIndex[1] + 1) * self.ZPositions
+        return self.Modules[PhiIndex][ZIndexFrom:ZIndexTo]
+
     def GetHalfLadderName(self, HalfLadderIndex):
         Name = 'L%d'%(HalfLadderIndex[0]+1)
         if HalfLadderIndex[1] >= self.ZPositions:
