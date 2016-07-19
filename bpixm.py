@@ -205,7 +205,8 @@ class BpixMountTool():
 
             ret = AskUser(['Main menu',revisionInfo,unsavedInfo],
                           [
-                            ['mount','_Mount'],
+                            ['mount','_Mount half ladder'],
+                            ['replace','Repla_ce single module'],
                             ['view','View _detector status'],
                             ['plan','View mounting _plan'],
                             ['log','Add _log entry'],
@@ -226,6 +227,8 @@ class BpixMountTool():
                 self.EnterSelectLayerMenu()
             elif ret == 'mount':
                 self.EnterMountMenu()
+            elif ret == 'replace':
+                self.EnterReplaceMenu()
             elif ret == 'log':
                 self.EnterLogMenu()
             elif ret == 'revs':
@@ -567,6 +570,43 @@ class BpixMountTool():
             return False
 
 
+    def EnterReplaceMenu(self):
+        os.system('clear')
+
+        # header
+        self.PrintBox("mounting plan for %s: select half ladder" % self.ActiveLayer)
+
+        ModuleChoices = []
+        MountingLayer = self.GetActiveMountingLayer()
+        for Ladder in MountingLayer.Modules:
+            LadderModules = []
+            for ModuleId in Ladder:
+                LadderModules.append(self.GetActiveMountingLayer().FormatModuleName(ModuleId))
+            ModuleChoices.append(LadderModules)
+
+        # Z positions
+        ZPositionsString = ' '*8
+        for ZPosition in range(self.Layers[self.ActiveLayer].ZPositions):
+            ZPositionsString += self.Layers[self.ActiveLayer].GetZPositionName(ZPosition).ljust(8)
+        for ZPosition in range(self.Layers[self.ActiveLayer].ZPositions, 2*self.Layers[self.ActiveLayer].ZPositions):
+            ZPositionsString += self.Layers[self.ActiveLayer].GetZPositionName(ZPosition).ljust(8)
+        print ZPositionsString
+
+        # half ladders
+        HalfLadderChoices = []
+        HeaderColumn = []
+
+        LadderIndex = 1
+        for Ladder in MountingLayer.Modules:
+            HeaderColumn.append(("L%d"%LadderIndex).ljust(5))
+            LadderIndex += 1
+
+        # ask user to pick a half ladder
+        selectedModuleIndex = AskUser2D('', ModuleChoices, HeaderColumn=HeaderColumn)
+
+        return self.EnterMountSingleModuleMenu(MountingLayer, selectedModuleIndex[0], selectedModuleIndex[1], PlannedLayer=self.GetActivePlanLayer())
+
+
     def VerifyModuleID(self, ModuleID, CheckLadderIndex, CheckZIndex):
         #print "VERIFY:", ModuleID, "/", CheckLadderIndex, "/", CheckZIndex
 
@@ -609,6 +649,62 @@ class BpixMountTool():
         return success
 
 
+    def EnterMountSingleModuleMenu(self, MountingLayer, LadderIndex, ZPosition, PlannedLayer = None):
+        oldModuleID = MountingLayer.FormatModuleName(MountingLayer.Modules[LadderIndex][ZPosition])
+
+        try:
+            plannedModuleID = PlannedLayer.FormatModuleName(PlannedLayer.Modules[LadderIndex][ZPosition])
+        except:
+            plannedModuleID = 'M????'
+
+        ModuleMountComplete = False
+        while not ModuleMountComplete:
+
+            # ask user for module ID
+            question = "Scan module ID to replace '{old}' (plan {plan}): ".format(old=oldModuleID, plan=plannedModuleID)
+            print question
+            newModuleID = raw_input()
+            if newModuleID == 'q':
+                return False
+
+            # check if module is mountable _here_
+            isMountable = self.VerifyModuleID(newModuleID, LadderIndex, ZPosition)
+
+            if isMountable:
+                # check if it was _planned_ to mount the module here
+                if newModuleID != plannedModuleID:
+                    warningMessage = "planning to mount module '%s' instead of '%s' at position z=%s" % (
+                        newModuleID, plannedModuleID, MountingLayer.GetZPositionName(ZPosition))
+                    self.ShowWarning(warningMessage)
+                    ret = AskUser("continue",
+                                  [
+                                      ['no', '_no'],
+                                      ['yes', '_yes']
+                                  ], DisplayWidth=self.DisplayWidth)
+                    if ret != 'yes':
+                        isMountable = False
+            else:
+                self.ShowWarning("This module is already mounted in another position, can't use it a second time!")
+
+            if isMountable:
+                # mount module
+                if self.MountModule(MountingLayer=self.GetActiveMountingLayer(),
+                                    LadderIndex=LadderIndex,
+                                    ZPosition=ZPosition,
+                                    newModuleID=newModuleID,
+                                    PlannedLayer=self.GetActivePlanLayer()
+                                    ):
+                    print "->mounted"
+                    self.FlagUnsaved()
+                    ModuleMountComplete = True
+                else:
+                    self.ShowWarning("Could not mount the module here! Enter Module ID again!")
+
+            else:
+                print "Enter Module ID again! (q to quit)"
+        return True
+
+
     def EnterScanHalfLadderMenu(self, HalfLadderIndex):
 
         # pick active layer for mounting
@@ -618,55 +714,9 @@ class BpixMountTool():
         # scan through all module slots in half-ladder
         for ZPosition in range(HalfLadderIndex[1] * MountingLayer.ZPositions,
                                (HalfLadderIndex[1] + 1) * MountingLayer.ZPositions):
-            oldModuleID = MountingLayer.FormatModuleName(MountingLayer.Modules[HalfLadderIndex[0]][ZPosition])
-            plannedModuleID = PlannedLayer.FormatModuleName(PlannedLayer.Modules[HalfLadderIndex[0]][ZPosition])
 
-
-            ModuleMountComplete = False
-            while not ModuleMountComplete:
-
-                # ask user for module ID
-                question = "Scan module ID to replace '{old}' (plan {plan}): ".format(old=oldModuleID, plan=plannedModuleID)
-                print question
-                newModuleID = raw_input()
-
-                # check if module is mountable _here_
-                isMountable = self.VerifyModuleID(newModuleID, HalfLadderIndex[0], ZPosition)
-
-                if isMountable:
-                    # check if it was _planned_ to mount the module here
-                    if newModuleID != plannedModuleID:
-                        warningMessage = "planning to mount module '%s' instead of '%s' at position z=%s" % (
-                            newModuleID, plannedModuleID, MountingLayer.GetZPositionName(ZPosition))
-                        self.ShowWarning(warningMessage)
-                        ret = AskUser("continue",
-                                      [
-                                          ['no', '_no'],
-                                          ['yes', '_yes']
-                                      ], DisplayWidth=self.DisplayWidth)
-                        if ret != 'yes':
-                            isMountable = False
-                else:
-                    self.ShowWarning("This module is already mounted in another position, can't use it a second time!")
-
-                if isMountable:
-                    # mount module
-                    if self.MountModule(MountingLayer=self.GetActiveMountingLayer(),
-                                     LadderIndex=HalfLadderIndex[0],
-                                     ZPosition=ZPosition,
-                                     newModuleID=newModuleID,
-                                     PlannedLayer=self.GetActivePlanLayer()
-                                     ):
-                        print "->mounted"
-                        ModuleMountComplete = True
-                    else:
-                        self.ShowWarning("Could not mount the module here! Enter Module ID again!")
-
-                else:
-                    print "Enter Module ID again!"
-
-
-        self.FlagUnsaved()
+            # mount single module at this position
+            self.EnterMountSingleModuleMenu(MountingLayer, HalfLadderIndex[0], ZPosition, PlannedLayer=PlannedLayer)
 
 
     def ClearHalfLadder(self, HalfLadderIndex):
