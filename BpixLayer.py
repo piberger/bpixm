@@ -22,7 +22,12 @@ class BpixLayer:
                     if len(modules) == self.ZPositions*2:
                         self.Modules[LadderIndex] = modules
                     else:
+                        print "-"*78
                         print "bad format: '%r'"%line
+                        print "length: ", len(modules)
+                        print "expected: ", self.ZPositions*2
+                        print "data: ", modules
+                        print "-"*78
                     LadderIndex += 1
         except:
             pass

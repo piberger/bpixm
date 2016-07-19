@@ -30,7 +30,9 @@ class BpixMountTool():
         self.InitializeModuleData()
 
         self.Operator = self.globalConfig.get('System', 'Operator')
+        self.Log("-"*80, Category='START')
         self.Log("started, operator: %s"%self.Operator, Category='START')
+        self.Log("-"*80, Category='START')
 
 
     def InitializeModuleData(self):
@@ -295,7 +297,7 @@ class BpixMountTool():
                 LL = self.getLastLine(self.dataDirectoryBase + dataDirectory + '/bpixm.log',200)
                 DateString = LL.split('[')[0]
             except:
-                DateString = '?'
+                pass
 
             print " REV {Rev}: {Date} {Status}".format(Rev=dataDirectory,Status='(HEAD)' if int(dataDirectory)==headRevision else '',Date=DateString)
 
@@ -563,7 +565,10 @@ class BpixMountTool():
         # scan through all module slots in half-ladder
         for ZPosition in range(HalfLadderIndex[1] * MountingLayer.ZPositions,
                                (HalfLadderIndex[1] + 1) * MountingLayer.ZPositions):
-            print "Scan module ID to replace '%s': "% MountingLayer.FormatModuleName(MountingLayer.Modules[HalfLadderIndex[0]][ZPosition])
+            oldModuleID = MountingLayer.FormatModuleName(MountingLayer.Modules[HalfLadderIndex[0]][ZPosition])
+            plannedModuleID = PlannedLayer.FormatModuleName(PlannedLayer.Modules[HalfLadderIndex[0]][ZPosition])
+            question = "Scan module ID to replace '{old}' (plan {plan}): ".format(old=oldModuleID, plan=plannedModuleID)
+            print question
             newModuleID = raw_input()
             if len(MountingLayer.Modules[HalfLadderIndex[0]][ZPosition]) < 1:
                 logString = "mount module  -> " + newModuleID
@@ -617,6 +622,13 @@ class BpixMountTool():
 
         return selectedLayer
 
+try:
+    os.system('clear')
+except:
+    pass
 
-bmt = BpixMountTool()
-bmt.EnterMainMenu()
+try:
+    bmt = BpixMountTool()
+    bmt.EnterMainMenu()
+except:
+    print "ERROR: can't initialize BpixMountTool()"
