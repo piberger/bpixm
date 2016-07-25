@@ -20,7 +20,9 @@ class BpixMountTool():
         self.globalConfig = ConfigParser.ConfigParser()
         self.globalConfig.read('config.ini')
         self.dataDirectoryBase = 'data/'
+        self.FillDirection = 'inwards'
         self.revisionTag = ''
+        self.Autosave = False
 
         try:
             self.DisplayWidth = int(self.globalConfig.get('System', 'DisplayWidth'))
@@ -34,6 +36,10 @@ class BpixMountTool():
         self.Log("started, operator: %s"%self.Operator, Category='START')
         self.Log("-"*80, Category='START')
 
+        try:
+            self.Autosave = True if self.globalConfig.get('System', 'Autosave').lower().strip() == 'true' else False
+        except:
+            pass
 
     def InitializeModuleData(self):
         self.UnsavedChanges = False
@@ -89,6 +95,9 @@ class BpixMountTool():
     def FlagUnsaved(self):
         self.UnsavedChanges = True
 
+        if self.Autosave:
+            self.SaveConfiguration(False)
+
 
     def ShowError(self, Message):
         sys.stdout.write('\x1b[31m')
@@ -112,6 +121,10 @@ class BpixMountTool():
 
 
     def WriteGlobalConfig(self):
+        if self.Autosave:
+            self.globalConfig.set('System', 'Autosave', 'true')
+        else:
+            self.globalConfig.set('System', 'Autosave', 'false')
 
         with open('config.ini', 'wb') as configfile:
             self.globalConfig.write(configfile)
@@ -125,12 +138,13 @@ class BpixMountTool():
         self.config.read(self.dataDirectory + 'config.ini')
 
 
-    def SaveConfiguration(self):
+    def SaveConfiguration(self, PrintOutput = True):
         Success = True
         for LayerName in self.LayerNames:
             layerMountFileName = self.dataDirectory + self.LayerMountFileName.format(Layer=LayerName)
             if self.LayersMounted[LayerName].SaveAs(layerMountFileName):
-                print "saved configuration for ", LayerName
+                if PrintOutput:
+                    print "saved configuration for ", LayerName
                 self.Log("saved configuration for %s"%LayerName, "CONFIG")
             else:
                 self.ShowError("could not save configuration for %s"%LayerName)
@@ -216,7 +230,7 @@ class BpixMountTool():
                             ['selectrevs','Select _revision'],
                             ['tagrevs','Set tag for this revision'],
                             ['select', '_Select Layer (active: %s)' % self.ActiveLayer],
-                            ['operator', 'Set _operator (currently: %s)'%self.Operator],
+                            ['settings', 'Sett_ings'],
                             ['quit','_Quit']
                           ], DisplayWidth=self.DisplayWidth)
             if ret == 'plan':
@@ -239,6 +253,8 @@ class BpixMountTool():
                 self.EnterTagRevsMenu()
             elif ret == 'save':
                 self.EnterSaveConfigurationMenu()
+            elif ret == 'settings':
+                self.EnterSettingsMenu()
             elif ret == 'operator':
                 self.EnterSetOperatorMenu()
             elif ret == 'step':
@@ -493,8 +509,11 @@ class BpixMountTool():
         print "+%s+\n" % ('-' * (self.DisplayWidth-2))
 
 
-    def GetFormattedHalfLadder(self, HalfLadderModules):
-        ret = ' > '
+    def GetFormattedHalfLadder(self, HalfLadderModules, LadderZIndex = 0):
+        if LadderZIndex == 0:
+            ret = ' > '
+        else:
+            ret = ''
         ModuleNameLength = 5
         EmptyModulePlaceholder = '-----'
         for HalfLadderModule in HalfLadderModules:
@@ -502,6 +521,8 @@ class BpixMountTool():
                 ret = ret + HalfLadderModule.ljust(ModuleNameLength+1)
             else:
                 ret = ret + EmptyModulePlaceholder.ljust(ModuleNameLength+1)
+        if LadderZIndex == 1:
+            ret += ' < '
         return ret
 
 
@@ -533,22 +554,27 @@ class BpixMountTool():
         LadderIndex = 1
         for Ladder in self.LayersMounted[self.ActiveLayer].Modules:
             HalfLadderChoices.append([
-                self.GetFormattedHalfLadder(Ladder[:self.Layers[self.ActiveLayer].ZPositions]),
-                self.GetFormattedHalfLadder(Ladder[self.Layers[self.ActiveLayer].ZPositions:])
+                self.GetFormattedHalfLadder(Ladder[:self.Layers[self.ActiveLayer].ZPositions], 0),
+                self.GetFormattedHalfLadder(Ladder[self.Layers[self.ActiveLayer].ZPositions:], 1)
             ])
             HeaderColumn.append(("L%d"%LadderIndex).ljust(5))
             LadderIndex += 1
 
+        HalfLadderChoices.append(["Go back to main menu",""])
+
         # ask user to pick a half ladder
         selectedHalfLadderIndex = AskUser2D('', HalfLadderChoices, HeaderColumn=HeaderColumn)
 
+        if selectedHalfLadderIndex[0] >= len(HalfLadderChoices)-1:
+            return False
+
         # check for modules already mounted on that half ladder
         selectedHalfLadderModules = self.GetActiveMountingLayer().GetHalfLadderModulesFromIndex(selectedHalfLadderIndex)
-        selectedHalfLadderString = self.GetFormattedHalfLadder(selectedHalfLadderModules)
+        selectedHalfLadderString = self.GetFormattedHalfLadder(selectedHalfLadderModules, selectedHalfLadderIndex[1])
 
         # check modules planned to be mounted on that half ladder
         toBeMountedHalfLadderModules = self.GetActivePlanLayer().GetHalfLadderModulesFromIndex(selectedHalfLadderIndex)
-        toBeMountedHalfLadderString = self.GetFormattedHalfLadder(toBeMountedHalfLadderModules)
+        toBeMountedHalfLadderString = self.GetFormattedHalfLadder(toBeMountedHalfLadderModules, selectedHalfLadderIndex[1])
 
         # display modules list and ask user how to continue
         ret = AskUser(["SELECTED HALF-LADDER: %s:"%selectedHalfLadderString,
@@ -705,18 +731,76 @@ class BpixMountTool():
         return True
 
 
+    def EnterFillDirectionMenu(self):
+        ret = AskUser("Set fill direction (used in 'Mount' menu) currently: %s" % self.FillDirection,
+                      [
+                          ['inwards', '_Inwards'],
+                          ['lefttoright', '_Left to right'],
+                          ['q', 'Back to settings (_q)']
+                      ], DisplayWidth=self.DisplayWidth)
+        if ret == 'inwards' or ret == 'lefttoright':
+            self.FillDirection = ret
+            self.WriteGlobalConfig()
+            return True
+        elif ret == 'q':
+            return False
+        else:
+            print "invalid option selected"
+
+
+    def EnterSettingsMenu(self):
+        while True:
+            ret = AskUser("Settings",
+                          [
+                              ['select', '_Select Layer (active: %s)' % self.ActiveLayer],
+                              ['operator', 'Set _operator (currently: %s)' % self.Operator],
+                              ['fill', 'Set _fill direction (currently: %s)' % self.FillDirection],
+                              ['autosave', 'Toggle _autosave (currently: %s)' % ('on' if self.Autosave else 'off')],
+                              ['q', 'Back to main menu (_q)']
+                          ], DisplayWidth=self.DisplayWidth)
+
+            if ret == 'autosave':
+                self.Autosave = not self.Autosave
+                self.WriteGlobalConfig()
+            elif ret == 'operator':
+                self.EnterSetOperatorMenu()
+            elif ret == 'select':
+                self.EnterSelectLayerMenu()
+            elif ret == 'fill':
+                self.EnterFillDirectionMenu()
+            elif ret == 'q':
+                return True
+
     def EnterScanHalfLadderMenu(self, HalfLadderIndex):
 
         # pick active layer for mounting
         MountingLayer = self.GetActiveMountingLayer()
         PlannedLayer = self.GetActivePlanLayer()
 
-        # scan through all module slots in half-ladder
-        for ZPosition in range(HalfLadderIndex[1] * MountingLayer.ZPositions,
-                               (HalfLadderIndex[1] + 1) * MountingLayer.ZPositions):
+        if self.FillDirection == 'lefttoright':
+            print "filling modules from left to right"
+            # scan through all module slots in half-ladder
+            for ZPosition in range(HalfLadderIndex[1] * MountingLayer.ZPositions,
+                                   (HalfLadderIndex[1] + 1) * MountingLayer.ZPositions):
 
-            # mount single module at this position
-            self.EnterMountSingleModuleMenu(MountingLayer, HalfLadderIndex[0], ZPosition, PlannedLayer=PlannedLayer)
+                # mount single module at this position
+                self.EnterMountSingleModuleMenu(MountingLayer, HalfLadderIndex[0], ZPosition, PlannedLayer=PlannedLayer)
+        else:
+            print "filling modules from outside (Z3) to inside (Z0)"
+            if HalfLadderIndex[1] == 0:
+                # scan through all module slots in half-ladder
+                for ZPosition in range(HalfLadderIndex[1] * MountingLayer.ZPositions,
+                                       (HalfLadderIndex[1] + 1) * MountingLayer.ZPositions):
+                    # mount single module at this position
+                    self.EnterMountSingleModuleMenu(MountingLayer, HalfLadderIndex[0], ZPosition,
+                                                    PlannedLayer=PlannedLayer)
+            else:
+                # scan through all module slots in half-ladder in reverse order
+                for ZPosition in range((HalfLadderIndex[1] + 1) * MountingLayer.ZPositions-1,
+                                       HalfLadderIndex[1] * MountingLayer.ZPositions-1, -1):
+                    # mount single module at this position
+                    self.EnterMountSingleModuleMenu(MountingLayer, HalfLadderIndex[0], ZPosition,
+                                                    PlannedLayer=PlannedLayer)
 
 
     def ClearHalfLadder(self, HalfLadderIndex):
