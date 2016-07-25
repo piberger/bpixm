@@ -216,6 +216,9 @@ class BpixMountTool():
             unsavedInfo = ''
             if self.UnsavedChanges:
                 unsavedInfo = "*****UNSAVED CHANGES!*****"
+            elif self.Autosave:
+                unsavedInfo = "Autosave is on! Changes are saved immediately!"
+
 
             ret = AskUser(['Main menu',revisionInfo,unsavedInfo],
                           [
