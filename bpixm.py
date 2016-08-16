@@ -63,8 +63,15 @@ class BpixMountTool():
         self.LayerNames = [x.strip() for x in self.config.get('Layers', 'LayerNames').split(',')]
         self.LayerPlanFileName = self.config.get('Layers', 'LayerPlanFileName')
         self.LayerMountFileName = self.config.get('Layers', 'LayerMountFileName')
+        self.SectorsFileName = self.config.get('Layers', 'SectorsFileName')
+        self.HubIDsFileName = self.config.get('Layers', 'HubIDsFileName')
+
+
+
+        # initialize layers
         self.Layers = {}
         self.LayersMounted = {}
+        self.Sectors = {}
 
         for LayerName in self.LayerNames:
             self.Layers[LayerName] = BpixLayer(LayerName, Ladders=int(self.config.get('Layer_%s'%LayerName, 'Ladders')), ZPositions=int(self.config.get('Layer_%s'%LayerName, 'ZPositions')))
@@ -84,7 +91,35 @@ class BpixMountTool():
             else:
                 print "mount file for", LayerName, " does not exist!!"
 
+            # initialize sectors <-> ladders configuration
+            sectorsFileName = self.dataDirectory + self.SectorsFileName.format(Layer=LayerName)
+            if os.path.isfile(sectorsFileName):
+                self.Sectors[LayerName] = {}
+                with open(sectorsFileName, 'r') as sectorsFile:
+                    try:
+                        for sectorLine in sectorsFile:
+                            sectorID = int(sectorLine.split(':')[0].strip(' '))
+                            ladders = [int(x) for x in sectorLine.split(':')[1].strip(' ').split(',')]
+                            self.Sectors[LayerName][sectorID] = ladders
+                    except:
+                        print sectorsFileName,": bad formatted line:", sectorLine
         self.ActiveLayer = self.config.get('Layers', 'ActiveLayer')
+        print "SECTORS:", self.Sectors
+
+        # initialize HUB IDs
+        self.HubIDs = []
+        hubIDsFileName = self.dataDirectory + self.HubIDsFileName
+        if os.path.isfile(hubIDsFileName):
+            with open(hubIDsFileName, 'r') as hubIDsFile:
+                for hubIDLine in hubIDsFile:
+                    try:
+                        hubID = int(hubIDLine.replace('\t',' ').split(' ')[0])
+                        self.HubIDs.append(hubID)
+                    except:
+                        print hubIDsFileName, ": bad formatted line:", hubIDLine
+            print "HUB-IDs:", self.HubIDs
+            if len(self.HubIDs) != 32:
+                print "\x1b[31mWARNING: unusual length of HUB IDs != 32\x1b[0m"
 
         try:
             self.revisionTag = self.config.get('Revision', 'Tag')
@@ -536,67 +571,91 @@ class BpixMountTool():
         return self.Layers[self.ActiveLayer]
 
     def EnterMountMenu(self):
-        os.system('clear')
+        while True:
+            os.system('clear')
 
-        # header
-        self.PrintBox("mounting plan for %s: select half ladder" % self.ActiveLayer)
+            # header
+            self.PrintBox("mounting plan for %s: select half ladder" % self.ActiveLayer)
 
-        # Z positions
-        ZPositionsString = ' '*11
-        for ZPosition in range(self.Layers[self.ActiveLayer].ZPositions):
-            ZPositionsString += self.Layers[self.ActiveLayer].GetZPositionName(ZPosition)
-        ZPositionsString += ' '*6
-        for ZPosition in range(self.Layers[self.ActiveLayer].ZPositions, 2*self.Layers[self.ActiveLayer].ZPositions):
-            ZPositionsString += self.Layers[self.ActiveLayer].GetZPositionName(ZPosition)
-        print ZPositionsString
+            # Z positions
+            ZPositionsString = ' '*11
+            for ZPosition in range(self.Layers[self.ActiveLayer].ZPositions):
+                ZPositionsString += self.Layers[self.ActiveLayer].GetZPositionName(ZPosition)
+            ZPositionsString += ' '*6
+            for ZPosition in range(self.Layers[self.ActiveLayer].ZPositions, 2*self.Layers[self.ActiveLayer].ZPositions):
+                ZPositionsString += self.Layers[self.ActiveLayer].GetZPositionName(ZPosition)
+            print ZPositionsString
 
-        # half ladders
-        HalfLadderChoices = []
-        HeaderColumn = []
+            # half ladders
+            HalfLadderChoices = []
+            HeaderColumn = []
 
-        LadderIndex = 1
-        for Ladder in self.LayersMounted[self.ActiveLayer].Modules:
-            HalfLadderChoices.append([
-                self.GetFormattedHalfLadder(Ladder[:self.Layers[self.ActiveLayer].ZPositions], 0),
-                self.GetFormattedHalfLadder(Ladder[self.Layers[self.ActiveLayer].ZPositions:], 1)
-            ])
-            HeaderColumn.append(("L%d"%LadderIndex).ljust(5))
-            LadderIndex += 1
+            LadderIndex = 1
+            for Ladder in self.LayersMounted[self.ActiveLayer].Modules:
+                HalfLadderChoices.append([
+                    self.GetFormattedHalfLadder(Ladder[:self.Layers[self.ActiveLayer].ZPositions], 0),
+                    self.GetFormattedHalfLadder(Ladder[self.Layers[self.ActiveLayer].ZPositions:], 1)
+                ])
+                HeaderColumn.append(("L%d"%LadderIndex).ljust(5))
+                LadderIndex += 1
 
-        HalfLadderChoices.append(["Go back to main menu",""])
+            HalfLadderChoices.append(["Go back to main menu",""])
 
-        # ask user to pick a half ladder
-        selectedHalfLadderIndex = AskUser2D('', HalfLadderChoices, HeaderColumn=HeaderColumn)
+            # ask user to pick a half ladder
+            selectedHalfLadderIndex = AskUser2D('', HalfLadderChoices, HeaderColumn=HeaderColumn)
 
-        if selectedHalfLadderIndex[0] >= len(HalfLadderChoices)-1:
-            return False
+            if selectedHalfLadderIndex[0] >= len(HalfLadderChoices)-1:
+                return False
 
-        # check for modules already mounted on that half ladder
-        selectedHalfLadderModules = self.GetActiveMountingLayer().GetHalfLadderModulesFromIndex(selectedHalfLadderIndex)
-        selectedHalfLadderString = self.GetFormattedHalfLadder(selectedHalfLadderModules, selectedHalfLadderIndex[1])
+            # check for modules already mounted on that half ladder
+            selectedHalfLadderModules = self.GetActiveMountingLayer().GetHalfLadderModulesFromIndex(selectedHalfLadderIndex)
+            selectedHalfLadderString = self.GetFormattedHalfLadder(selectedHalfLadderModules, selectedHalfLadderIndex[1])
 
-        # check modules planned to be mounted on that half ladder
-        toBeMountedHalfLadderModules = self.GetActivePlanLayer().GetHalfLadderModulesFromIndex(selectedHalfLadderIndex)
-        toBeMountedHalfLadderString = self.GetFormattedHalfLadder(toBeMountedHalfLadderModules, selectedHalfLadderIndex[1])
+            # check modules planned to be mounted on that half ladder
+            toBeMountedHalfLadderModules = self.GetActivePlanLayer().GetHalfLadderModulesFromIndex(selectedHalfLadderIndex)
+            toBeMountedHalfLadderString = self.GetFormattedHalfLadder(toBeMountedHalfLadderModules, selectedHalfLadderIndex[1])
 
-        # display modules list and ask user how to continue
-        ret = AskUser(["SELECTED HALF-LADDER: %s:"%selectedHalfLadderString,
-                       "MOUNTING PLAN:        %s"%toBeMountedHalfLadderString],
-                      [
-                          ['scan', '_Scan modules...'],
-                          ['clear', '_Clear'],
-                          ['back', 'Go back (_q)']
-                      ], DisplayWidth=self.DisplayWidth)
+            # display HUB IDs
+            selectedLadderID = 1+selectedHalfLadderIndex[0]
+            try:
+                hubIDOffset = 0
+                for sector, ladders in self.Sectors[self.ActiveLayer].items():
+                    sectorLadderIndex = 0
+                    for ladder in ladders:
+                        if selectedLadderID == ladder:
+                            hubIDOffset = sectorLadderIndex*4
+                        sectorLadderIndex += 1
 
-        if ret == 'scan':
-            self.Log("Layer: " + self.ActiveLayer + ", Ladder: " + self.Layers[self.ActiveLayer].GetHalfLadderName(selectedHalfLadderIndex), 'MOUNT')
-            self.Log("Currently installed modules: " + selectedHalfLadderString, 'MOUNT')
-            self.EnterScanHalfLadderMenu(selectedHalfLadderIndex)
-        elif ret == 'clear':
-            self.ClearHalfLadder(selectedHalfLadderIndex)
+                if selectedHalfLadderIndex[1] == 1:
+                    hubIDsString = ', '.join([str(x) for x in self.HubIDs[hubIDOffset:hubIDOffset+4]])
+                else:
+                    hubIDsString = ', '.join([str(x) for x in reversed(self.HubIDs[hubIDOffset:hubIDOffset+4])])
 
-        elif ret == 'back':
-            return False
+            except Exception as e:
+                print e
+                raise
+
+            # display modules list and ask user how to continue
+            ret = AskUser(["SELECTED HALF-LADDER: %s:"%selectedHalfLadderString,
+                           "MOUNTING PLAN:        %s"%toBeMountedHalfLadderString,
+                           "HUB IDs:              %s" %hubIDsString,
+                           ],
+                          [
+                              ['scan', '_Scan modules...'],
+                              ['clear', '_Clear'],
+                              ['mountmenu', 'Go _back'],
+                              ['back', 'Main menu (_q)'],
+                          ], DisplayWidth=self.DisplayWidth)
+
+            if ret == 'scan':
+                self.Log("Layer: " + self.ActiveLayer + ", Ladder: " + self.Layers[self.ActiveLayer].GetHalfLadderName(selectedHalfLadderIndex), 'MOUNT')
+                self.Log("Currently installed modules: " + selectedHalfLadderString, 'MOUNT')
+                self.EnterScanHalfLadderMenu(selectedHalfLadderIndex)
+            elif ret == 'clear':
+                self.ClearHalfLadder(selectedHalfLadderIndex)
+
+            elif ret == 'back':
+                return False
 
 
     def EnterReplaceMenu(self):
@@ -689,7 +748,41 @@ class BpixMountTool():
         ModuleMountComplete = False
         while not ModuleMountComplete:
 
+            selectedLadderID = 1+LadderIndex
+            hubIDOffset = 0
+            sectorID = 0
+            try:
+                for sector, ladders in self.Sectors[self.ActiveLayer].items():
+                    sectorLadderIndex = 0
+                    for ladder in ladders:
+                        if selectedLadderID == ladder:
+                            hubIDOffset = sectorLadderIndex*4
+                            sectorID = sector
+                        sectorLadderIndex += 1
+            except:
+                print "no hub id found!"
+
+            halfLadderZPosition = 3-ZPosition if ZPosition < 4 else ZPosition-4
+            hubID = self.HubIDs[hubIDOffset + halfLadderZPosition]
+
+            print "----------------"
+            print "SECTOR:      %d"%sectorID
+            print "LADDER:      %d"%selectedLadderID
+            print "LADDER ZPOS: %d"%ZPosition
+            print "HUB-ID:      %d"%hubID
+            print "----------------"
+
+            for hubIDbit in range(5):
+                if ((hubID >> hubIDbit) % 2) == 1:
+                    print "%d   O------O    "%hubIDbit
+                else:
+                    print "%d   O      O  <<"%hubIDbit
+
+
+
+
             # ask user for module ID
+
             question = "Scan module ID to replace '{old}' (plan {plan}): ".format(old=oldModuleID, plan=plannedModuleID)
             print question
             newModuleID = raw_input()
