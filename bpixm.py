@@ -8,6 +8,7 @@ import ConfigParser
 import shutil
 import glob
 import datetime
+import traceback
 
 from BpixLayer import BpixLayer
 import BpixUI.BpixUI
@@ -29,6 +30,9 @@ class BpixMountTool():
         except:
             self.DisplayWidth = 80
 
+        self.UnsavedChanges = False
+        self.StorageLocations = {}
+        self.InitializeStorageData()
         self.InitializeModuleData()
 
         self.Operator = self.globalConfig.get('System', 'Operator')
@@ -41,9 +45,36 @@ class BpixMountTool():
         except:
             pass
 
+
+    def GetDataDirectory(self):
+        return self.dataDirectoryBase + self.globalConfig.get('System', 'DataRevision') + '/'
+
+
+    def InitializeStorageData(self):
+        dataDirectory = self.GetDataDirectory()
+        self.StorageLocations = {}
+        storageLocationFileName = dataDirectory + 'storage_locations.txt'
+        if os.path.isfile(storageLocationFileName):
+            with open(storageLocationFileName, 'r') as storageLocationFile:
+                for line in storageLocationFile:
+                    lineParts = line.strip().replace(',',';').replace('\t',';').split(';')
+                    if len(lineParts) > 1:
+                        self.StorageLocations[lineParts[0]] = lineParts[1].strip()
+        else:
+            self.ShowWarning("can't find storage location file in '$data/storage_locations.txt'")
+
+
+    def GetStorageLocation(self, ModuleID):
+        location = 'unknown'
+        if ModuleID in self.StorageLocations:
+            location = self.StorageLocations[ModuleID]
+            if len(location) < 1:
+                location = 'empty'
+        return location
+
+
     def InitializeModuleData(self):
-        self.UnsavedChanges = False
-        self.dataDirectory = self.dataDirectoryBase + self.globalConfig.get('System', 'DataRevision') + '/'
+        self.dataDirectory = self.GetDataDirectory()
         if not os.path.isfile(self.dataDirectory + 'config.ini'):
 
             dataDirectories = [x.strip('/').split('/')[-1] for x in glob.glob(self.dataDirectoryBase + '*/')]
@@ -66,17 +97,19 @@ class BpixMountTool():
         self.SectorsFileName = self.config.get('Layers', 'SectorsFileName')
         self.HubIDsFileName = self.config.get('Layers', 'HubIDsFileName')
 
-
-
         # initialize layers
         self.Layers = {}
         self.LayersMounted = {}
         self.Sectors = {}
 
         for LayerName in self.LayerNames:
-            self.Layers[LayerName] = BpixLayer(LayerName, Ladders=int(self.config.get('Layer_%s'%LayerName, 'Ladders')), ZPositions=int(self.config.get('Layer_%s'%LayerName, 'ZPositions')))
-            self.LayersMounted[LayerName] = BpixLayer(LayerName+'(mounted)', Ladders=int(self.config.get('Layer_%s'%LayerName, 'Ladders')), ZPositions=int(self.config.get('Layer_%s'%LayerName, 'ZPositions')))
+            layerLadders = int(self.config.get('Layer_%s'%LayerName, 'Ladders'))
+            layerZpositions = int(self.config.get('Layer_%s'%LayerName, 'ZPositions'))
+            layerTbms = int(self.config.get('Layer_%s'%LayerName, 'Tbms'))
+            self.Layers[LayerName] = BpixLayer(LayerName, Ladders=layerLadders, ZPositions=layerZpositions, Tbms=layerTbms)
+            self.LayersMounted[LayerName] = BpixLayer(LayerName+'(mounted)', Ladders=layerLadders, ZPositions=layerZpositions, Tbms=layerTbms)
 
+            # initialize planned module positions
             layerPlanFileName = self.dataDirectory + self.LayerPlanFileName.format(Layer=LayerName)
             if os.path.isfile(layerPlanFileName):
                 print "initialize ",LayerName
@@ -84,12 +117,22 @@ class BpixMountTool():
             else:
                 print "config file for",LayerName," does not exist!!"
 
+            # initialize already mounted module positions
             layerMountFileName = self.dataDirectory + self.LayerMountFileName.format(Layer=LayerName)
             if os.path.isfile(layerMountFileName):
                 print "initialize mounted modules for ", LayerName
                 self.LayersMounted[LayerName].LoadFromFile(layerMountFileName)
             else:
                 print "mount file for", LayerName, " does not exist!!"
+
+            # initialize HUB IDs
+            hubIDsFileName = self.dataDirectory + self.HubIDsFileName.format(Layer=LayerName)
+            if os.path.isfile(hubIDsFileName):
+                print "initialize HUB IDs for ", LayerName
+                self.Layers[LayerName].LoadHubIDsFromFile(hubIDsFileName)
+                self.LayersMounted[LayerName].LoadHubIDsFromFile(hubIDsFileName)
+            else:
+                print "HUB IDs file for", LayerName, " does not exist!!"
 
             # initialize sectors <-> ladders configuration
             sectorsFileName = self.dataDirectory + self.SectorsFileName.format(Layer=LayerName)
@@ -105,21 +148,6 @@ class BpixMountTool():
                         print sectorsFileName,": bad formatted line:", sectorLine
         self.ActiveLayer = self.config.get('Layers', 'ActiveLayer')
         print "SECTORS:", self.Sectors
-
-        # initialize HUB IDs
-        self.HubIDs = []
-        hubIDsFileName = self.dataDirectory + self.HubIDsFileName
-        if os.path.isfile(hubIDsFileName):
-            with open(hubIDsFileName, 'r') as hubIDsFile:
-                for hubIDLine in hubIDsFile:
-                    try:
-                        hubID = int(hubIDLine.replace('\t',' ').split(' ')[0])
-                        self.HubIDs.append(hubID)
-                    except:
-                        print hubIDsFileName, ": bad formatted line:", hubIDLine
-            print "HUB-IDs:", self.HubIDs
-            if len(self.HubIDs) != 32:
-                print "\x1b[31mWARNING: unusual length of HUB IDs != 32\x1b[0m"
 
         try:
             self.revisionTag = self.config.get('Revision', 'Tag')
@@ -615,25 +643,9 @@ class BpixMountTool():
             toBeMountedHalfLadderModules = self.GetActivePlanLayer().GetHalfLadderModulesFromIndex(selectedHalfLadderIndex)
             toBeMountedHalfLadderString = self.GetFormattedHalfLadder(toBeMountedHalfLadderModules, selectedHalfLadderIndex[1])
 
-            # display HUB IDs
-            selectedLadderID = 1+selectedHalfLadderIndex[0]
-            try:
-                hubIDOffset = 0
-                for sector, ladders in self.Sectors[self.ActiveLayer].items():
-                    sectorLadderIndex = 0
-                    for ladder in ladders:
-                        if selectedLadderID == ladder:
-                            hubIDOffset = sectorLadderIndex*4
-                        sectorLadderIndex += 1
-
-                if selectedHalfLadderIndex[1] == 1:
-                    hubIDsString = ', '.join([str(x) for x in self.HubIDs[hubIDOffset:hubIDOffset+4]])
-                else:
-                    hubIDsString = ', '.join([str(x) for x in reversed(self.HubIDs[hubIDOffset:hubIDOffset+4])])
-
-            except Exception as e:
-                print e
-                raise
+            # display hub IDs
+            hubIDsList = self.GetActivePlanLayer().GetHalfLadderHubIDsFromIndex(selectedHalfLadderIndex)
+            hubIDsString = ', '.join(hubIDsList)
 
             # display modules list and ask user how to continue
             ret = AskUser(["SELECTED HALF-LADDER: %s:"%selectedHalfLadderString,
@@ -746,43 +758,19 @@ class BpixMountTool():
             plannedModuleID = 'M????'
 
         ModuleMountComplete = False
+        hubIDs = MountingLayer.HubIDs[LadderIndex][ZPosition]
         while not ModuleMountComplete:
 
             selectedLadderID = 1+LadderIndex
             hubIDOffset = 0
             sectorID = 0
-            try:
-                for sector, ladders in self.Sectors[self.ActiveLayer].items():
-                    sectorLadderIndex = 0
-                    for ladder in ladders:
-                        if selectedLadderID == ladder:
-                            hubIDOffset = sectorLadderIndex*4
-                            sectorID = sector
-                        sectorLadderIndex += 1
-            except:
-                print "no hub id found!"
 
             halfLadderZPosition = 3-ZPosition if ZPosition < 4 else ZPosition-4
-            hubID = self.HubIDs[hubIDOffset + halfLadderZPosition]
-
-            print "----------------"
-            print "SECTOR:      %d"%sectorID
-            print "LADDER:      %d"%selectedLadderID
-            print "LADDER ZPOS: %d"%ZPosition
-            print "HUB-ID:      %d"%hubID
-            print "----------------"
-
-            for hubIDbit in range(5):
-                if ((hubID >> hubIDbit) % 2) == 1:
-                    print "%d   O------O    "%hubIDbit
-                else:
-                    print "%d   O      O  <<"%hubIDbit
-
-
-
 
             # ask user for module ID
-
+            print " LADDER:           %d"%(1+LadderIndex)
+            print " PLANNED MODULE:   %s"%plannedModuleID
+            print " STORAGE LOCATION: %s"%self.GetStorageLocation(plannedModuleID)
             question = "Scan module ID to replace '{old}' (plan {plan}): ".format(old=oldModuleID, plan=plannedModuleID)
             print question
             newModuleID = raw_input()
@@ -806,21 +794,45 @@ class BpixMountTool():
                     if ret != 'yes':
                         isMountable = False
             else:
-                self.ShowWarning("This module is already mounted in another position, can't use it a second time!")
+                self.ShowWarning("The module {ModuleID} is already mounted in another position, can't use it a second time!".format(ModuleId=newModuleID))
 
             if isMountable:
-                # mount module
-                if self.MountModule(MountingLayer=self.GetActiveMountingLayer(),
-                                    LadderIndex=LadderIndex,
-                                    ZPosition=ZPosition,
-                                    newModuleID=newModuleID,
-                                    PlannedLayer=self.GetActivePlanLayer()
-                                    ):
-                    print "->mounted"
-                    self.FlagUnsaved()
-                    ModuleMountComplete = True
-                else:
-                    self.ShowWarning("Could not mount the module here! Enter Module ID again!")
+
+                print "############################################################"
+                print " VERIFY MODULE AND CHANGE HUB ID"
+                print "############################################################"
+                print " MODULE:      %s" % newModuleID
+                print " LADDER:      %d" % selectedLadderID
+                print " LADDER ZPOS: %d" % ZPosition
+                print " HUB-IDs:     %s" % ('/'.join(['%d'%x for x in hubIDs]))
+                print "------------------------------------------------------------"
+                for tbmID, hubID in enumerate(hubIDs, start=1):
+                    print "TBM", tbmID, " of", len(hubIDs), " => HUB ID = ", hubID
+                    for hubIDbit in range(5):
+                        if ((hubID >> hubIDbit) % 2) == 1:
+                            print "%d   O------O    " % hubIDbit
+                        else:
+                            print "%d   O      O  <<" % hubIDbit
+                print "------------------------------------------------------------"
+
+                ret = AskUser("continue",
+                              [
+                                  ['yes', '_Yes'],
+                                  ['no', '_no']
+                              ], DisplayWidth=self.DisplayWidth)
+                if ret == 'yes':
+                    # mount module
+                    if self.MountModule(MountingLayer=self.GetActiveMountingLayer(),
+                                        LadderIndex=LadderIndex,
+                                        ZPosition=ZPosition,
+                                        newModuleID=newModuleID,
+                                        PlannedLayer=self.GetActivePlanLayer()
+                                        ):
+                        print "->mounted"
+                        self.FlagUnsaved()
+                        ModuleMountComplete = True
+                    else:
+                        self.ShowWarning("Could not mount the module here! Enter Module ID again!")
 
             else:
                 print "Enter Module ID again! (q to quit)"
@@ -831,10 +843,11 @@ class BpixMountTool():
         ret = AskUser("Set fill direction (used in 'Mount' menu) currently: %s" % self.FillDirection,
                       [
                           ['inwards', '_Inwards'],
+                          ['outwards', '_Outwards'],
                           ['lefttoright', '_Left to right'],
                           ['q', 'Back to settings (_q)']
                       ], DisplayWidth=self.DisplayWidth)
-        if ret == 'inwards' or ret == 'lefttoright':
+        if ret in ['inwards', 'outwards', 'lefttoright']:
             self.FillDirection = ret
             self.WriteGlobalConfig()
             return True
@@ -873,38 +886,43 @@ class BpixMountTool():
         MountingLayer = self.GetActiveMountingLayer()
         PlannedLayer = self.GetActivePlanLayer()
 
+        ModuleZPositions = []
+
         if self.FillDirection == 'lefttoright':
             print "filling modules from left to right"
-            # scan through all module slots in half-ladder
-            for ZPosition in range(HalfLadderIndex[1] * MountingLayer.ZPositions,
-                                   (HalfLadderIndex[1] + 1) * MountingLayer.ZPositions):
+            ModuleZPositions = range(HalfLadderIndex[1] * MountingLayer.ZPositions,
+                                   (HalfLadderIndex[1] + 1) * MountingLayer.ZPositions)
 
-                # mount single module at this position
-                self.EnterMountSingleModuleMenu(MountingLayer, HalfLadderIndex[0], ZPosition, PlannedLayer=PlannedLayer)
+        elif self.FillDirection == 'outwards':
+            print "filling modules from inside (Z0) to outside (Z3)"
+            if HalfLadderIndex[1] == 0:
+                ModuleZPositions = list(reversed(range(HalfLadderIndex[1] * MountingLayer.ZPositions,
+                                       (HalfLadderIndex[1] + 1) * MountingLayer.ZPositions)))
+            else:
+                # scan through all module slots in half-ladder in reverse order
+                ModuleZPositions = list(reversed(range((HalfLadderIndex[1] + 1) * MountingLayer.ZPositions - 1,
+                                       HalfLadderIndex[1] * MountingLayer.ZPositions - 1, -1)))
         else:
             print "filling modules from outside (Z3) to inside (Z0)"
             if HalfLadderIndex[1] == 0:
-                # scan through all module slots in half-ladder
-                for ZPosition in range(HalfLadderIndex[1] * MountingLayer.ZPositions,
-                                       (HalfLadderIndex[1] + 1) * MountingLayer.ZPositions):
-                    # mount single module at this position
-                    self.EnterMountSingleModuleMenu(MountingLayer, HalfLadderIndex[0], ZPosition,
-                                                    PlannedLayer=PlannedLayer)
+                ModuleZPositions = range(HalfLadderIndex[1] * MountingLayer.ZPositions,
+                                       (HalfLadderIndex[1] + 1) * MountingLayer.ZPositions)
             else:
                 # scan through all module slots in half-ladder in reverse order
-                for ZPosition in range((HalfLadderIndex[1] + 1) * MountingLayer.ZPositions-1,
-                                       HalfLadderIndex[1] * MountingLayer.ZPositions-1, -1):
-                    # mount single module at this position
-                    self.EnterMountSingleModuleMenu(MountingLayer, HalfLadderIndex[0], ZPosition,
-                                                    PlannedLayer=PlannedLayer)
+                ModuleZPositions = range((HalfLadderIndex[1] + 1) * MountingLayer.ZPositions - 1,
+                                       HalfLadderIndex[1] * MountingLayer.ZPositions - 1, -1)
+
+        # mount individual modules
+        for ZPosition in ModuleZPositions:
+            self.EnterMountSingleModuleMenu(MountingLayer, HalfLadderIndex[0], ZPosition, PlannedLayer=PlannedLayer)
 
 
     def ClearHalfLadder(self, HalfLadderIndex):
 
         ret = AskUser("clear half ladder?",
                       [
-                          ['yes', '_Yes'],
-                          ['no', '_no']
+                          ['no', '_No'],
+                          ['yes', '_yes']
                       ], DisplayWidth=self.DisplayWidth)
 
         if ret == 'yes':
@@ -941,5 +959,15 @@ except:
 try:
     bmt = BpixMountTool()
     bmt.EnterMainMenu()
-except:
-    print "ERROR: can't initialize BpixMountTool()"
+except Exception as e:
+    exc_type, exc_obj, exc_tb = sys.exc_info()
+    # Start red color
+    sys.stdout.write("\x1b[31m")
+    sys.stdout.flush()
+    # Print error message
+    print 'An exception occurred!'
+    # Print traceback
+    traceback.print_exception(exc_type, exc_obj, exc_tb)
+    # Stop red color
+    sys.stdout.write("\x1b[0m")
+    sys.stdout.flush()
