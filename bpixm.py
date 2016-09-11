@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 
 import os
-import termios
 import sys
-import tty
 import ConfigParser
 import shutil
 import glob
@@ -259,7 +257,7 @@ class BpixMountTool():
 
             revisionInfo = ''
             try:
-                dataDirectories = [x.strip('/').split('/')[-1] for x in glob.glob(self.dataDirectoryBase + '*/')]
+                dataDirectories = [x.replace('\\','/').strip('/').split('/')[-1] for x in glob.glob(self.dataDirectoryBase + '*/')]
                 headRevision = max([int(x) for x in dataDirectories if x.isdigit()])
                 try:
                     if int(headRevision) == int(self.globalConfig.get('System', 'DataRevision', 1)):

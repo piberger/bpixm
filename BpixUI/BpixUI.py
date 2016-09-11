@@ -1,9 +1,28 @@
 import sys
-import termios
-import tty
 
 try:
-    from msvcrt import getch
+    import termios
+    import tty
+except:
+    pass
+
+try:
+    from msvcrt import getch as getch_windows
+    def getch():
+        char = getch_windows()
+        if ord(char) == 224:
+            k1 = getch_windows()
+            if k1 == 'H':
+                k1 = '^'
+            elif k1 == 'P':
+                k1 = 'V'
+            elif k1 == 'M':
+                k1 = '>'
+            elif k1 == 'K':
+                k1 = '<'
+            return k1
+        else:
+            return char
 except ImportError:
     def getch():
         fd = sys.stdin.fileno()
