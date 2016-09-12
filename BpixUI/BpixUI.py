@@ -88,7 +88,7 @@ class BPixUi:
 
                 if AnswerIndex == Selection:
                     if self.UseColors:
-                        AnswerFormatted = "  \x1b[47m{answer}\x1b[49m\x1b[0m".format(answer=AnswerFormatted)
+                        AnswerFormatted = "  \x1b[42m{answer}\x1b[47m\x1b[0m".format(answer=AnswerFormatted)
                     else:
                         AnswerFormatted = "  > {answer}".format(answer=AnswerFormatted)
                         extraChars += 2
@@ -153,7 +153,7 @@ class BPixUi:
 
                     if Selection == [AnswerIndexRow, AnswerIndexColumn]:
                         if self.UseColors:
-                            AnswerFormatted = "  \x1b[47m{answer}\x1b[49m\x1b[0m ".format(answer=AnswerFormatted)
+                            AnswerFormatted = "  \x1b[42m{answer}\x1b[47m\x1b[0m ".format(answer=AnswerFormatted)
                         else:
                             AnswerFormatted = " [{answer}]".format(answer=AnswerFormatted)
                     else:
