@@ -23,6 +23,14 @@ class BpixMountTool():
         self.revisionTag = ''
         self.Autosave = False
 
+        useColors = False
+        try:
+            useColors = (int(self.globalConfig.get('System','colors')) > 0)
+        except:
+            pass
+
+        self.UI = BPixUi(useColors)
+
         try:
             self.DisplayWidth = int(self.globalConfig.get('System', 'DisplayWidth'))
         except:
@@ -281,7 +289,7 @@ class BpixMountTool():
                 unsavedInfo = "Autosave is on! Changes are saved immediately!"
 
 
-            ret = AskUser(['Main menu',revisionInfo,unsavedInfo],
+            ret = self.UI.AskUser(['Main menu',revisionInfo,unsavedInfo],
                           [
                             ['mount','_Mount modules on half ladder'],
                             ['replace','_Replace single module'],
@@ -332,7 +340,7 @@ class BpixMountTool():
             elif ret == 'quit':
                 if self.UnsavedChanges:
                     self.ShowWarning("There are unsaved changes!")
-                    ret = AskUser("do you really want to quit?",
+                    ret = self.UI.AskUser("do you really want to quit?",
                                   [
                                       ['no', '_no'],
                                       ['yes', '_yes']
@@ -430,7 +438,7 @@ class BpixMountTool():
 
             revs.append([dataDirectory, " REV {Rev}: {Date} {Status}".format(Rev=dataDirectory,Status='(HEAD)' if int(dataDirectory)==headRevision else '',Date=DateString)])
 
-        ret = AskUser("Select revision to return to", revs, DisplayWidth=self.DisplayWidth)
+        ret = self.UI.AskUser("Select revision to return to", revs, DisplayWidth=self.DisplayWidth)
         if ret == 'input':
             self.PrintBox('Input revision number')
             newRevNr = raw_input()
@@ -444,7 +452,7 @@ class BpixMountTool():
         OverwriteConfirmed = False
         if self.UnsavedChanges:
             self.ShowWarning("There are unsaved changes!")
-            ret = AskUser("do you really want to switch to another parameters revision?",
+            ret = self.UI.AskUser("do you really want to switch to another parameters revision?",
                           [
                               ['no', '_no'],
                               ['yes', '_yes']
@@ -491,7 +499,7 @@ class BpixMountTool():
 
 
     def EnterSaveConfigurationMenu(self):
-        ret = AskUser("Save list of mounted modules for all layers?",
+        ret = self.UI.AskUser("Save list of mounted modules for all layers?",
                       [
                           ['yes', '_yes'],
                           ['no', '_no']
@@ -674,7 +682,7 @@ class BpixMountTool():
             HalfLadderChoices.append(["Go back to main menu",""])
 
             # ask user to pick a half ladder
-            selectedHalfLadderIndex = AskUser2D('', HalfLadderChoices, HeaderColumn=HeaderColumn)
+            selectedHalfLadderIndex = self.UI.AskUser2D('', HalfLadderChoices, HeaderColumn=HeaderColumn)
 
             if selectedHalfLadderIndex[0] >= len(HalfLadderChoices)-1:
                 return False
@@ -692,7 +700,7 @@ class BpixMountTool():
             hubIDsString = ', '.join(hubIDsList)
 
             # display modules list and ask user how to continue
-            ret = AskUser(["SELECTED HALF-LADDER: %s:"%selectedHalfLadderString,
+            ret = self.UI.AskUser(["SELECTED HALF-LADDER: %s:"%selectedHalfLadderString,
                            "MOUNTING PLAN:        %s"%toBeMountedHalfLadderString,
                            "HUB IDs:              %s" %hubIDsString,
                            ],
@@ -749,7 +757,7 @@ class BpixMountTool():
             LadderIndex += 1
 
         # ask user to pick a half ladder
-        selectedModuleIndex = AskUser2D('', ModuleChoices, HeaderColumn=HeaderColumn)
+        selectedModuleIndex = self.UI.AskUser2D('', ModuleChoices, HeaderColumn=HeaderColumn)
         self.Log("Layer: " + self.ActiveLayer + ", Ladder: %d"%selectedModuleIndex[0] + " Z: %d"%selectedModuleIndex[1], 'MOUNT-REPLACE')
 
         return self.EnterMountSingleModuleMenu(MountingLayer, selectedModuleIndex[0], selectedModuleIndex[1], PlannedLayer=self.GetActivePlanLayer())
@@ -843,7 +851,7 @@ class BpixMountTool():
                     warningMessage = "planning to mount module '%s' instead of '%s' at position z=%s" % (
                         newModuleID, plannedModuleID, MountingLayer.GetZPositionName(ZPosition))
                     self.ShowWarning(warningMessage)
-                    ret = AskUser("continue",
+                    ret = self.UI.AskUser("continue",
                                   [
                                       ['no', '_no'],
                                       ['yes', '_yes']
@@ -878,7 +886,7 @@ class BpixMountTool():
 
                 self.Log("HUB-IDS: {HubIDs}".format(HubIDs=HubIDString), Category="MOUNT-MODULE")
 
-                ret = AskUser("continue",
+                ret = self.UI.AskUser("continue",
                               [
                                   ['yes', '_Yes'],
                                   ['no', '_no']
@@ -903,7 +911,7 @@ class BpixMountTool():
 
 
     def EnterFillDirectionMenu(self):
-        ret = AskUser("Set fill direction (used in 'Mount' menu) currently: %s" % self.FillDirection,
+        ret = self.UI.AskUser("Set fill direction (used in 'Mount' menu) currently: %s" % self.FillDirection,
                       [
                           ['inwards', '_Inwards'],
                           ['outwards', '_Outwards'],
@@ -922,7 +930,7 @@ class BpixMountTool():
 
     def EnterSettingsMenu(self):
         while True:
-            ret = AskUser("Settings",
+            ret = self.UI.AskUser("Settings",
                           [
                               ['select', '_Select Layer (active: %s)' % self.ActiveLayer],
                               ['operator', 'Set _operator (currently: %s)' % self.Operator],
@@ -982,7 +990,7 @@ class BpixMountTool():
 
     def ClearHalfLadder(self, HalfLadderIndex):
 
-        ret = AskUser("clear half ladder?",
+        ret = self.UI.AskUser("clear half ladder?",
                       [
                           ['no', '_No'],
                           ['yes', '_yes']
@@ -1006,7 +1014,7 @@ class BpixMountTool():
         for LayerName in self.LayerNames:
             layerMenu.append([LayerName,'_%d %s'%(LayerIndex, LayerName)])
             LayerIndex += 1
-        selectedLayer = AskUser('Select Layer', layerMenu, DisplayWidth=self.DisplayWidth)
+        selectedLayer = self.UI.AskUser('Select Layer', layerMenu, DisplayWidth=self.DisplayWidth)
         if selectedLayer:
             try:
                 if selectedLayer in self.LayerNames:
