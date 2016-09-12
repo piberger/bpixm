@@ -108,7 +108,7 @@ class BpixMountTool():
             self.LayersMounted[LayerName] = BpixLayer(LayerName+'(mounted)', Ladders=layerLadders, ZPositions=layerZpositions, Tbms=layerTbms)
 
             # initialize planned module positions
-            layerPlanFileName = self.dataDirectory + self.LayerPlanFileName.format(Layer=LayerName)
+            layerPlanFileName =  self.GetDataDirectory() + self.LayerPlanFileName.format(Layer=LayerName)
             if os.path.isfile(layerPlanFileName):
                 print "initialize ",LayerName
                 self.Layers[LayerName].LoadFromFile(layerPlanFileName)
@@ -116,7 +116,7 @@ class BpixMountTool():
                 print "config file for",LayerName," does not exist!!"
 
             # initialize already mounted module positions
-            layerMountFileName = self.dataDirectory + self.LayerMountFileName.format(Layer=LayerName)
+            layerMountFileName =  self.GetDataDirectory() + self.LayerMountFileName.format(Layer=LayerName)
             if os.path.isfile(layerMountFileName):
                 print "initialize mounted modules for ", LayerName
                 self.LayersMounted[LayerName].LoadFromFile(layerMountFileName)
@@ -124,7 +124,7 @@ class BpixMountTool():
                 print "mount file for", LayerName, " does not exist!!"
 
             # initialize HUB IDs
-            hubIDsFileName = self.dataDirectory + self.HubIDsFileName.format(Layer=LayerName)
+            hubIDsFileName =  self.GetDataDirectory() + self.HubIDsFileName.format(Layer=LayerName)
             if os.path.isfile(hubIDsFileName):
                 print "initialize HUB IDs for ", LayerName
                 self.Layers[LayerName].LoadHubIDsFromFile(hubIDsFileName)
@@ -133,7 +133,7 @@ class BpixMountTool():
                 print "HUB IDs file for", LayerName, " does not exist!!"
 
             # initialize sectors <-> ladders configuration
-            sectorsFileName = self.dataDirectory + self.SectorsFileName.format(Layer=LayerName)
+            sectorsFileName =  self.GetDataDirectory() + self.SectorsFileName.format(Layer=LayerName)
             if os.path.isfile(sectorsFileName):
                 self.Sectors[LayerName] = {}
                 with open(sectorsFileName, 'r') as sectorsFile:
@@ -176,7 +176,7 @@ class BpixMountTool():
 
     def Log(self, Message, Category = 'LOG'):
         logString = "{Date} [{Category}] {Message}\n".format(Date=datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), Category=Category, Message=Message)
-        logFileName = self.dataDirectory + 'bpixm.log'
+        logFileName =  self.GetDataDirectory() + 'bpixm.log'
         with open(logFileName, "a") as logFile:
             logFile.write(logString)
 
@@ -193,16 +193,16 @@ class BpixMountTool():
 
 
     def SaveLocalConfiguration(self):
-        with open(self.dataDirectory + 'config.ini', 'wb') as configfile:
+        with open( self.GetDataDirectory() + 'config.ini', 'wb') as configfile:
             self.config.write(configfile)
 
-        self.config.read(self.dataDirectory + 'config.ini')
+        self.config.read(self.GetDataDirectory() + 'config.ini')
 
 
     def SaveConfiguration(self, PrintOutput = True):
         Success = True
         for LayerName in self.LayerNames:
-            layerMountFileName = self.dataDirectory + self.LayerMountFileName.format(Layer=LayerName)
+            layerMountFileName =  self.GetDataDirectory() + self.LayerMountFileName.format(Layer=LayerName)
             if self.LayersMounted[LayerName].SaveAs(layerMountFileName):
                 if PrintOutput:
                     print "saved configuration for ", LayerName
@@ -237,7 +237,7 @@ class BpixMountTool():
 
         if Success:
             try:
-                shutil.copytree(self.dataDirectory, dataDirectoryNew)
+                shutil.copytree( self.GetDataDirectory(), dataDirectoryNew)
             except:
                 print "can't copy to new location:", dataDirectoryNew
                 Success = False
@@ -283,15 +283,16 @@ class BpixMountTool():
 
             ret = AskUser(['Main menu',revisionInfo,unsavedInfo],
                           [
-                            ['mount','_Mount half ladder'],
-                            ['replace','Repla_ce single module'],
+                            ['mount','_Mount modules on half ladder'],
+                            ['replace','_Replace single module'],
                             ['view','View _detector status'],
                             ['plan','View mounting _plan'],
+                            ['hubids', 'View _hub IDs'],
                             ['log','Add _log entry'],
                             ['save', 'Sa_ve configuration'],
                             ['step','Save configuration as new revision'],
                             ['revs','Sho_w revisions'],
-                            ['selectrevs','Select _revision'],
+                            ['selectrevs','Select revision'],
                             ['tagrevs','Set tag for this revision'],
                             ['select', '_Select Layer (active: %s)' % self.ActiveLayer],
                             ['settings', 'Sett_ings'],
@@ -299,6 +300,8 @@ class BpixMountTool():
                           ], DisplayWidth=self.DisplayWidth)
             if ret == 'plan':
                 self.EnterViewPlanMenu()
+            elif ret == 'hubids':
+                self.EnterViewHubIDsMenu()
             elif ret == 'view':
                 self.EnterViewStatusMenu()
             elif ret == 'select':
@@ -573,6 +576,49 @@ class BpixMountTool():
         print "+%s+\n" % ('-' * (self.DisplayWidth-2))
 
 
+    def EnterViewHubIDsMenu(self):
+        os.system('clear')
+
+        MountingLayer = self.LayersMounted[self.ActiveLayer]
+        PlannedLayer = self.Layers[self.ActiveLayer]
+
+        self.PrintBox("status of %s"%self.ActiveLayer)
+
+        ZPositionsString = ' '*15
+
+        for ZPosition in range(MountingLayer.ZPositions):
+            ZPositionsString += ("Z%d-"%(MountingLayer.ZPositions - ZPosition - 1)).ljust(7)
+        ZPositionsString += '  '
+        for ZPosition in range(MountingLayer.ZPositions):
+            ZPositionsString += ("Z%d+"%(ZPosition)).ljust(7)
+
+        print "|%s|"%(ZPositionsString.ljust((self.DisplayWidth-2)))
+
+        for LadderIndex in range(len(MountingLayer.Modules)):
+
+            LadderName = "L%d" %(LadderIndex+1)
+            LadderName = "\x1b[32m%s\x1b[0m   " % (LadderName.ljust(10))
+
+            # compare all mounted modules in the ladder with mounting plan
+            LadderString = '   ' + LadderName
+            for i in range(0, 2*MountingLayer.ZPositions):
+                if i == MountingLayer.ZPositions:
+                    LadderString += '   '
+
+                hubIDmounted = MountingLayer.FormatHubIDTuple(MountingLayer.HubIDs[LadderIndex][i])
+                hubIDplanned = PlannedLayer.FormatHubIDTuple(PlannedLayer.HubIDs[LadderIndex][i])
+
+                if (hubIDmounted == hubIDplanned) or len(hubIDmounted) < 1:
+                    LadderString += hubIDplanned.ljust(7)
+                else:
+                    LadderString += hubIDmounted.ljust(7)
+
+            print "|%s|"%(LadderString.ljust((self.DisplayWidth+7)))
+            LadderIndex += 1
+
+        print "+%s+\n" % ('-' * (self.DisplayWidth-2))
+
+
     def GetFormattedHalfLadder(self, HalfLadderModules, LadderZIndex = 0):
         if LadderZIndex == 0:
             ret = ' > '
@@ -704,6 +750,7 @@ class BpixMountTool():
 
         # ask user to pick a half ladder
         selectedModuleIndex = AskUser2D('', ModuleChoices, HeaderColumn=HeaderColumn)
+        self.Log("Layer: " + self.ActiveLayer + ", Ladder: %d"%selectedModuleIndex[0] + " Z: %d"%selectedModuleIndex[1], 'MOUNT-REPLACE')
 
         return self.EnterMountSingleModuleMenu(MountingLayer, selectedModuleIndex[0], selectedModuleIndex[1], PlannedLayer=self.GetActivePlanLayer())
 
@@ -780,6 +827,9 @@ class BpixMountTool():
             print question
             newModuleID = raw_input()
             if newModuleID == 'q':
+                logMessage = "CANCEL: no module scanned, action was cancelled by user!"
+                self.Log(logMessage, Category="MOUNT-MODULE")
+                print logMessage
                 return False
 
             self.Log("L: {Ladder}, Z: {Z}, Plan: {Plan} (in {Box}), Scanned: {Scanned}".format(Ladder=LadderIndex+1, Z=ZPosition, Plan=plannedModuleID, Scanned=newModuleID, Box=ModuleStorageLocation), Category="MOUNT-MODULE")
@@ -960,6 +1010,8 @@ class BpixMountTool():
                 if selectedLayer in self.LayerNames:
                     self.ActiveLayer = selectedLayer
                     self.Log("SELECT layer: %s"%selectedLayer, Category='LAYER')
+                    self.config.set('Layers', 'ActiveLayer', selectedLayer)
+                    self.SaveLocalConfiguration()
 
             except:
                 selectedLayer = ''
