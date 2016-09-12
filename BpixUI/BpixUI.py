@@ -88,7 +88,7 @@ class BPixUi:
 
                 if AnswerIndex == Selection:
                     if self.UseColors:
-                        AnswerFormatted = "  \x1b[47m{answer}\x1b[0m".format(answer=AnswerFormatted)
+                        AnswerFormatted = "  \x1b[47m{answer}\x1b[49m\x1b[0m".format(answer=AnswerFormatted)
                     else:
                         AnswerFormatted = "  > {answer}".format(answer=AnswerFormatted)
                         extraChars += 2
@@ -140,6 +140,7 @@ class BPixUi:
                     sys.stdout.write("\033[F")
                 if len(question) > 0:
                     sys.stdout.write("\033[F")
+
             First = False
 
             AnswerIndexRow = 0
@@ -152,7 +153,7 @@ class BPixUi:
 
                     if Selection == [AnswerIndexRow, AnswerIndexColumn]:
                         if self.UseColors:
-                            AnswerFormatted = "  \x1b[47m{answer}\x1b[0m ".format(answer=AnswerFormatted)
+                            AnswerFormatted = "  \x1b[47m{answer}\x1b[49m\x1b[0m ".format(answer=AnswerFormatted)
                         else:
                             AnswerFormatted = " [{answer}]".format(answer=AnswerFormatted)
                     else:
