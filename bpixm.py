@@ -740,11 +740,11 @@ class BpixMountTool():
             ModuleChoices.append(LadderModules)
 
         # Z positions
-        ZPositionsString = ' '*8
+        ZPositionsString = ' '*9
         for ZPosition in range(self.Layers[self.ActiveLayer].ZPositions):
-            ZPositionsString += self.Layers[self.ActiveLayer].GetZPositionName(ZPosition).ljust(8)
+            ZPositionsString += self.Layers[self.ActiveLayer].GetZPositionName(ZPosition).ljust(9)
         for ZPosition in range(self.Layers[self.ActiveLayer].ZPositions, 2*self.Layers[self.ActiveLayer].ZPositions):
-            ZPositionsString += self.Layers[self.ActiveLayer].GetZPositionName(ZPosition).ljust(8)
+            ZPositionsString += self.Layers[self.ActiveLayer].GetZPositionName(ZPosition).ljust(9)
         print ZPositionsString
 
         # half ladders
