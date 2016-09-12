@@ -867,11 +867,13 @@ class BpixMountTool():
                 print "------------------------------------------------------------"
                 for tbmID, hubID in enumerate(hubIDs, start=1):
                     print "TBM", tbmID, " of", len(hubIDs), " => HUB ID = ", hubID
+                    print "least significant bit"
                     for hubIDbit in range(5):
                         if ((hubID >> hubIDbit) % 2) == 1:
                             print "%d   O------O    " % hubIDbit
                         else:
                             print "%d   O      O  <<" % hubIDbit
+                    print "most significant bit"
                 print "------------------------------------------------------------"
 
                 self.Log("HUB-IDS: {HubIDs}".format(HubIDs=HubIDString), Category="MOUNT-MODULE")
