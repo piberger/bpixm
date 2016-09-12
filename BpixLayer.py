@@ -105,9 +105,9 @@ class BpixLayer:
 
     def GetHalfLadderName(self, HalfLadderIndex):
         Name = 'L%d'%(HalfLadderIndex[0]+1)
-        if HalfLadderIndex[1] >= self.ZPositions:
+        if HalfLadderIndex[1] == 1:
             Name += "+"
-        else:
+        elif HalfLadderIndex[1] == 0:
             Name += "-"
         return Name
 

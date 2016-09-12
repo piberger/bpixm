@@ -662,6 +662,9 @@ class BpixMountTool():
                 self.Log("Currently installed modules: " + selectedHalfLadderString, 'MOUNT')
                 self.EnterScanHalfLadderMenu(selectedHalfLadderIndex)
             elif ret == 'clear':
+                self.Log("Layer: " + self.ActiveLayer + ", Ladder: " + self.Layers[self.ActiveLayer].GetHalfLadderName(
+                    selectedHalfLadderIndex), 'MOUNT-CLEAR')
+                self.Log("Currently installed modules: " + selectedHalfLadderString, 'MOUNT-CLEAR')
                 self.ClearHalfLadder(selectedHalfLadderIndex)
 
             elif ret == 'back':
@@ -732,14 +735,17 @@ class BpixMountTool():
         success = False
         try:
             if len(MountingLayer.Modules[LadderIndex][ZPosition]) < 1:
-                logString = "mount module  -> " + newModuleID
+                logString = "DONE: mount module  -> " + newModuleID
             else:
-                logString = "replace module " + MountingLayer.Modules[LadderIndex][ZPosition] + ' -> ' + newModuleID
+                logString = "DONE: replace module " + MountingLayer.Modules[LadderIndex][ZPosition] + ' -> ' + newModuleID
             if PlannedLayer:
                 plannedModule = PlannedLayer.Modules[LadderIndex][ZPosition]
                 logString += ' plan: ' + plannedModule
-            MountingLayer.Modules[LadderIndex][ZPosition] = newModuleID
-            success = True
+            try:
+                MountingLayer.Modules[LadderIndex][ZPosition] = newModuleID
+                success = True
+            except:
+                logString = "FAILED: mount module  -> " + newModuleID
         except:
             pass
 
@@ -766,19 +772,22 @@ class BpixMountTool():
             halfLadderZPosition = 3-ZPosition if ZPosition < 4 else ZPosition-4
 
             # ask user for module ID
+            ModuleStorageLocation = self.GetStorageLocation(plannedModuleID)
             print " LADDER:           %d"%(1+LadderIndex)
             print " PLANNED MODULE:   %s"%plannedModuleID
-            print " STORAGE LOCATION: %s"%self.GetStorageLocation(plannedModuleID)
+            print " STORAGE LOCATION: %s"%ModuleStorageLocation
             question = "Scan module ID to replace '{old}' (plan {plan}): ".format(old=oldModuleID, plan=plannedModuleID)
             print question
             newModuleID = raw_input()
             if newModuleID == 'q':
                 return False
 
+            self.Log("L: {Ladder}, Z: {Z}, Plan: {Plan} (in {Box}), Scanned: {Scanned}".format(Ladder=LadderIndex+1, Z=ZPosition, Plan=plannedModuleID, Scanned=newModuleID, Box=ModuleStorageLocation), Category="MOUNT-MODULE")
             # check if module is mountable _here_
             isMountable = self.VerifyModuleID(newModuleID, LadderIndex, ZPosition)
 
             if isMountable:
+                self.Log("OK: The module {ModuleID} can be mounted here.".format(ModuleID=newModuleID), Category="MOUNT-MODULE")
                 # check if it was _planned_ to mount the module here
                 if newModuleID != plannedModuleID:
                     warningMessage = "planning to mount module '%s' instead of '%s' at position z=%s" % (
@@ -790,19 +799,21 @@ class BpixMountTool():
                                       ['yes', '_yes']
                                   ], DisplayWidth=self.DisplayWidth)
                     if ret != 'yes':
+                        self.Log("CANCEL: action was cancelled by user!", Category="MOUNT-MODULE")
                         isMountable = False
             else:
                 self.ShowWarning("The module {ModuleID} is already mounted in another position, can't use it a second time!".format(ModuleId=newModuleID))
 
             if isMountable:
 
+                HubIDString = ('/'.join(['%d'%x for x in hubIDs]))
                 print "############################################################"
                 print " VERIFY MODULE AND CHANGE HUB ID"
                 print "############################################################"
                 print " MODULE:      %s" % newModuleID
                 print " LADDER:      %d" % selectedLadderID
                 print " LADDER ZPOS: %d" % ZPosition
-                print " HUB-IDs:     %s" % ('/'.join(['%d'%x for x in hubIDs]))
+                print " HUB-IDs:     %s" % HubIDString
                 print "------------------------------------------------------------"
                 for tbmID, hubID in enumerate(hubIDs, start=1):
                     print "TBM", tbmID, " of", len(hubIDs), " => HUB ID = ", hubID
@@ -812,6 +823,8 @@ class BpixMountTool():
                         else:
                             print "%d   O      O  <<" % hubIDbit
                 print "------------------------------------------------------------"
+
+                self.Log("HUB-IDS: {HubIDs}".format(HubIDs=HubIDString), Category="MOUNT-MODULE")
 
                 ret = AskUser("continue",
                               [
@@ -928,7 +941,11 @@ class BpixMountTool():
                 print "%s ----> %s"%(self.LayersMounted[self.ActiveLayer].FormatModuleName(self.LayersMounted[self.ActiveLayer].Modules[HalfLadderIndex[0]][ZPosition]), self.LayersMounted[self.ActiveLayer].FormatModuleName(''))
                 self.LayersMounted[self.ActiveLayer].Modules[HalfLadderIndex[0]][ZPosition] = ''
             print "cleared!"
+            self.Log("DONE: half-ladder cleared!", 'MOUNT-CLEAR')
+
             self.FlagUnsaved()
+        else:
+            self.Log("CANCEL: clear cancelled.", 'MOUNT-CLEAR')
 
 
     def EnterSelectLayerMenu(self):
