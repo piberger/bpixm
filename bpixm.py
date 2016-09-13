@@ -19,7 +19,7 @@ class BpixMountTool():
         self.globalConfig = ConfigParser.ConfigParser()
         self.globalConfig.read('config.ini')
         self.dataDirectoryBase = 'data/'
-        self.FillDirection = 'inwards'
+        self.FillDirection = self.globalConfig.get('System', 'fill')
         self.revisionTag = ''
         self.Autosave = False
 
@@ -195,6 +195,7 @@ class BpixMountTool():
         else:
             self.globalConfig.set('System', 'Autosave', 'false')
 
+        self.globalConfig.set('System', 'fill', self.FillDirection)
         with open('config.ini', 'wb') as configfile:
             self.globalConfig.write(configfile)
         self.globalConfig.read('config.ini')
@@ -628,10 +629,12 @@ class BpixMountTool():
 
 
     def GetFormattedHalfLadder(self, HalfLadderModules, LadderZIndex = 0):
-        if LadderZIndex == 0:
+
+        if LadderZIndex == 0 and (self.FillDirection == 'inwards' or self.FillDirection == 'lefttoright'):
             ret = ' > '
         else:
             ret = ''
+
         ModuleNameLength = 5
         EmptyModulePlaceholder = '-----'
         for HalfLadderModule in HalfLadderModules:
@@ -639,8 +642,11 @@ class BpixMountTool():
                 ret = ret + HalfLadderModule.ljust(ModuleNameLength+1)
             else:
                 ret = ret + EmptyModulePlaceholder.ljust(ModuleNameLength+1)
-        if LadderZIndex == 1:
+        if LadderZIndex == 1 and (self.FillDirection == 'inwards' or self.FillDirection == 'righttoleft'):
             ret += ' < '
+        if LadderZIndex == 0 and (self.FillDirection == 'inwards' or self.FillDirection == 'righttoleft'):
+            ret += ' < '
+
         return ret
 
 
@@ -779,10 +785,17 @@ class BpixMountTool():
                         alreadyMountedPositions.append("Ladder {Ladder}, Z {ZIndex}".format(Ladder=LadderIndex, ZIndex=ZIndex))
 
         if len(alreadyMountedPositions)>0:
-            print "ModuleID already mounted at: ", "; ".join(alreadyMountedPositions)
+            self.ShowWarning(
+                "The module {ModuleID} is already mounted in another position ({Position}), can't use it a second time!".format(
+                    ModuleID=ModuleID, Position="; ".join(alreadyMountedPositions)))
             return False
-        else:
-            return True
+
+        if len(ModuleID) > 6:
+            self.ShowWarning("Module-ID is too long, max. length of 6 allowed")
+            return False
+
+
+        return True
 
 
     def MountModule(self, MountingLayer, LadderIndex, ZPosition, newModuleID, PlannedLayer = None):
@@ -807,6 +820,13 @@ class BpixMountTool():
         self.Log(logString, 'MOUNT-MODULE')
         return success
 
+    def ReadModuleBarcode(self):
+        moduleID = raw_input()
+        # correct barcodes
+        if moduleID.startswith('D'):
+            moduleID = 'M' + moduleID[1:]
+
+        return moduleID
 
     def EnterMountSingleModuleMenu(self, MountingLayer, LadderIndex, ZPosition, PlannedLayer = None):
         oldModuleID = MountingLayer.FormatModuleName(MountingLayer.Modules[LadderIndex][ZPosition])
@@ -833,7 +853,9 @@ class BpixMountTool():
             print " STORAGE LOCATION: %s"%ModuleStorageLocation
             question = "Scan module ID to replace '{old}' (plan {plan}): ".format(old=oldModuleID, plan=plannedModuleID)
             print question
-            newModuleID = raw_input()
+
+            newModuleID = self.ReadModuleBarcode()
+
             if newModuleID == 'q':
                 logMessage = "CANCEL: no module scanned, action was cancelled by user!"
                 self.Log(logMessage, Category="MOUNT-MODULE")
@@ -860,15 +882,19 @@ class BpixMountTool():
                         self.Log("CANCEL: action was cancelled by user!", Category="MOUNT-MODULE")
                         isMountable = False
             else:
-                self.ShowWarning("The module {ModuleID} is already mounted in another position, can't use it a second time!".format(ModuleId=newModuleID))
+                pass
 
             if isMountable:
 
                 HubIDString = ('/'.join(['%d'%x for x in hubIDs]))
+                StorageLocationScannedID = self.GetStorageLocation(newModuleID)
                 print "############################################################"
                 print " VERIFY MODULE AND CHANGE HUB ID"
                 print "############################################################"
                 print " MODULE:      %s" % newModuleID
+                print " STORAGE:     %s" % StorageLocationScannedID
+                if StorageLocationScannedID in ['unknown', 'empty']:
+                    self.ShowWarning('Storage location for module {ModuleID} is unknown, this module ID might not exist, please check!'.format(ModuleID=newModuleID))
                 print " LADDER:      %d" % selectedLadderID
                 print " LADDER ZPOS: %d" % ZPosition
                 print " HUB-IDs:     %s" % HubIDString
