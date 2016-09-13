@@ -1,4 +1,5 @@
 import sys
+import os
 
 try:
     import termios
@@ -52,6 +53,15 @@ class BPixUi:
 
     def UseColors(self, useColors = True):
         self.UseColors = useColors
+
+    def Clear(self):
+        try:
+            if os.name == 'nt':
+                os.system('cls')
+            else:
+                os.system('clear')
+        except:
+            pass
 
     def AskUser(self, question, answers, DisplayWidth=80):
         Selection=0

@@ -510,7 +510,7 @@ class BpixMountTool():
 
 
     def EnterViewPlanMenu(self):
-        os.system('clear')
+        self.UI.Clear()
 
         PlannedLayer = self.Layers[self.ActiveLayer]
         self.PrintBox("mounting plan for %s"%self.ActiveLayer)
@@ -545,7 +545,7 @@ class BpixMountTool():
 
 
     def EnterViewStatusMenu(self):
-        os.system('clear')
+        self.UI.Clear()
 
         MountingLayer = self.LayersMounted[self.ActiveLayer]
         PlannedLayer = self.Layers[self.ActiveLayer]
@@ -585,7 +585,7 @@ class BpixMountTool():
 
 
     def EnterViewHubIDsMenu(self):
-        os.system('clear')
+        self.UI.Clear()
 
         MountingLayer = self.LayersMounted[self.ActiveLayer]
         PlannedLayer = self.Layers[self.ActiveLayer]
@@ -652,7 +652,7 @@ class BpixMountTool():
 
     def EnterMountMenu(self):
         while True:
-            os.system('clear')
+            self.UI.Clear()
 
             # header
             self.PrintBox("mounting plan for %s: select half ladder" % self.ActiveLayer)
@@ -726,7 +726,7 @@ class BpixMountTool():
 
 
     def EnterReplaceMenu(self):
-        os.system('clear')
+        self.UI.Clear()
 
         # header
         self.PrintBox("mounting plan for %s: select half ladder" % self.ActiveLayer)
@@ -1028,10 +1028,7 @@ class BpixMountTool():
 
         return selectedLayer
 
-try:
-    os.system('clear')
-except:
-    pass
+
 
 try:
     bmt = BpixMountTool()
