@@ -59,9 +59,9 @@ class BpixLayer:
 
     def GetZPositionName(self, ZPosition):
         if ZPosition < self.ZPositions:
-            return ("Z%d-" % (self.ZPositions - ZPosition - 1)).ljust(self.ZPositionNameLength)
+            return ("Z%d-" % (self.ZPositions - ZPosition)).ljust(self.ZPositionNameLength)
         else:
-            return ("Z%d+" % (ZPosition-self.ZPositions)).ljust(self.ZPositionNameLength)
+            return ("Z%d+" % (ZPosition-self.ZPositions+1)).ljust(self.ZPositionNameLength)
 
 
     def CheckModuleName(self, ModuleName):

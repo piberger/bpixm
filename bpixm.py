@@ -560,10 +560,10 @@ class BpixMountTool():
         ZPositionsString = '               '
 
         for ZPosition in range(PlannedLayer.ZPositions):
-            ZPositionsString += ("Z%d-"%(PlannedLayer.ZPositions - ZPosition - 1)).ljust(7)
+            ZPositionsString += ("Z%d-"%(PlannedLayer.ZPositions - ZPosition)).ljust(7)
         ZPositionsString += '  '
         for ZPosition in range(PlannedLayer.ZPositions):
-            ZPositionsString += ("Z%d+"%(ZPosition)).ljust(7)
+            ZPositionsString += ("Z%d+"%(ZPosition+1)).ljust(7)
 
         print "|%s|"%(ZPositionsString.ljust((self.DisplayWidth-2)))
 
@@ -597,10 +597,10 @@ class BpixMountTool():
         ZPositionsString = ' '*15
 
         for ZPosition in range(MountingLayer.ZPositions):
-            ZPositionsString += ("Z%d-"%(MountingLayer.ZPositions - ZPosition - 1)).ljust(7)
+            ZPositionsString += ("Z%d-"%(MountingLayer.ZPositions - ZPosition)).ljust(7)
         ZPositionsString += '  '
         for ZPosition in range(MountingLayer.ZPositions):
-            ZPositionsString += ("Z%d+"%(ZPosition)).ljust(7)
+            ZPositionsString += ("Z%d+"%(ZPosition+1)).ljust(7)
 
         print "|%s|"%(ZPositionsString.ljust((self.DisplayWidth-2)))
 
@@ -673,6 +673,8 @@ class BpixMountTool():
 
         if LadderZIndex == 0 and (self.FillDirection == 'inwards' or self.FillDirection == 'lefttoright'):
             ret = ' > '
+        elif LadderZIndex == 1 and (self.FillDirection == 'outwards' or self.FillDirection == 'lefttoright'):
+            ret = ' > '
         else:
             ret = ''
 
@@ -685,7 +687,7 @@ class BpixMountTool():
                 ret = ret + EmptyModulePlaceholder.ljust(ModuleNameLength+1)
         if LadderZIndex == 1 and (self.FillDirection == 'inwards' or self.FillDirection == 'righttoleft'):
             ret += ' < '
-        if LadderZIndex == 0 and (self.FillDirection == 'inwards' or self.FillDirection == 'righttoleft'):
+        if LadderZIndex == 0 and (self.FillDirection == 'outwards' or self.FillDirection == 'righttoleft'):
             ret += ' < '
 
         return ret
@@ -705,10 +707,10 @@ class BpixMountTool():
             self.PrintBox("mounting plan for %s: select half ladder" % self.ActiveLayer)
 
             # Z positions
-            ZPositionsString = ' '*11
+            ZPositionsString = ' '*12
             for ZPosition in range(self.Layers[self.ActiveLayer].ZPositions):
                 ZPositionsString += self.Layers[self.ActiveLayer].GetZPositionName(ZPosition)
-            ZPositionsString += ' '*6
+            ZPositionsString += ' '*7
             for ZPosition in range(self.Layers[self.ActiveLayer].ZPositions, 2*self.Layers[self.ActiveLayer].ZPositions):
                 ZPositionsString += self.Layers[self.ActiveLayer].GetZPositionName(ZPosition)
             print ZPositionsString
@@ -980,12 +982,13 @@ class BpixMountTool():
     def EnterFillDirectionMenu(self):
         ret = self.UI.AskUser("Set fill direction (used in 'Mount' menu) currently: %s" % self.FillDirection,
                       [
-                          ['inwards', '_Inwards'],
-                          ['outwards', '_Outwards'],
-                          ['lefttoright', '_Left to right'],
+                          ['inwards', '_Inwards -> <-'],
+                          ['outwards', '_Outwards <- ->'],
+                          ['lefttoright', '_Left to right -> ->'],
+                          ['righttoleft', '_Right to left <- <-'],
                           ['q', 'Back to settings (_q)']
                       ], DisplayWidth=self.DisplayWidth)
-        if ret in ['inwards', 'outwards', 'lefttoright']:
+        if ret in ['inwards', 'outwards', 'lefttoright', 'righttoleft']:
             self.FillDirection = ret
             self.WriteGlobalConfig()
             return True
