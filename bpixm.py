@@ -260,6 +260,44 @@ class BpixMountTool():
 
         return Success
 
+    def EnterSearchMenu(self):
+        print "############################################################"
+        print " ENTER/SCAN MODULE ID"
+        print "############################################################"
+        moduleID = self.ReadModuleBarcode()
+        self.Log("Search for module: %s"%moduleID, 'SEARCH')
+        StorageLocationScannedID = self.GetStorageLocation(moduleID)
+        print "############################################################"
+        print " SEARCH RESULTS"
+        print "############################################################"
+        print " MODULE:        %s" % moduleID
+        print " STORAGE:       %s" % StorageLocationScannedID
+        if StorageLocationScannedID in ['unknown', 'empty']:
+            self.ShowWarning(
+                'Storage location for module {ModuleID} is unknown, this module ID might not exist, please check!'.format(
+                    ModuleID=moduleID))
+
+        plannedPositions = []
+        if len(moduleID) > 0:
+            for layerName, layer in self.Layers.items():
+                for ladderNumber, ladder in enumerate(layer.Modules, start=1):
+                    for planModuleID in ladder:
+                        if planModuleID == moduleID:
+                            plannedPositions.append("{Layer} LADDER {Ladder}".format(Layer=layerName, Ladder=ladderNumber))
+        print " PLAN POSITION: %s" % (', '.join(plannedPositions) if len(plannedPositions) > 0 else '-')
+
+        mountedPositions = []
+        if len(moduleID) > 0:
+            for layerName, layer in self.LayersMounted.items():
+                for ladderNumber, ladder in enumerate(layer.Modules, start=1):
+                    for planModuleID in ladder:
+                        if planModuleID == moduleID:
+                            mountedPositions.append("{Layer} LADDER {Ladder}".format(Layer=layerName, Ladder=ladderNumber))
+        print " MOUNTED AT:    %s" % (', '.join(mountedPositions) if len(mountedPositions) > 0 else '-')
+        print "############################################################"
+        print "press any key to continue to main menu"
+        raw_input()
+        return True
 
     def EnterMainMenu(self):
         while True:
@@ -297,6 +335,7 @@ class BpixMountTool():
                             ['view','View _detector status'],
                             ['plan','View mounting _plan'],
                             ['hubids', 'View _hub IDs'],
+                            ['search', 'Search module ID'],
                             ['log','Add _log entry'],
                             ['save', 'Sa_ve configuration'],
                             ['step','Save configuration as new revision'],
@@ -315,6 +354,8 @@ class BpixMountTool():
                 self.EnterViewStatusMenu()
             elif ret == 'select':
                 self.EnterSelectLayerMenu()
+            elif ret == 'search':
+                self.EnterSearchMenu()
             elif ret == 'mount':
                 self.EnterMountMenu()
             elif ret == 'replace':
