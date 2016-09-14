@@ -522,3 +522,113 @@
 2016-09-14 16:45 [START] started, operator: Pirmin
 2016-09-14 16:45 [START] --------------------------------------------------------------------------------
 2016-09-14 16:45 [USER] LADDER 11, +2, M2067, hole 4 full of glue, no nut
+2016-09-14 16:48 [START] --------------------------------------------------------------------------------
+2016-09-14 16:48 [START] started, operator: Pirmin
+2016-09-14 16:48 [START] --------------------------------------------------------------------------------
+2016-09-14 17:03 [SEARCH] Search for module: M2182
+2016-09-14 17:04 [SEARCH] Search for module: M2161
+2016-09-14 17:07 [MOUNT] Layer: LAYER2o, Ladder: L13+
+2016-09-14 17:07 [MOUNT] Currently installed modules: ----- ----- ----- -----  < 
+2016-09-14 17:07 [MOUNT-MODULE] L: 13, Z: 7, Plan: M2087 (in BOX-4 T015 / 1), Scanned: M2087
+2016-09-14 17:07 [MOUNT-MODULE] OK: The module M2087 can be mounted here.
+2016-09-14 17:07 [MOUNT-MODULE] HUB-IDS: 22
+2016-09-14 17:08 [MOUNT-MODULE] DONE: mount module  -> M2087 plan: M2087
+2016-09-14 17:08 [CONFIG] saved configuration for LAYER1o
+2016-09-14 17:08 [CONFIG] saved configuration for LAYER1i
+2016-09-14 17:08 [CONFIG] saved configuration for LAYER2o
+2016-09-14 17:08 [CONFIG] saved configuration for LAYER2i
+2016-09-14 17:08 [CONFIG] saved configuration for LAYER3o
+2016-09-14 17:08 [CONFIG] saved configuration for LAYER3i
+2016-09-14 17:08 [CONFIG] saved configuration for LAYER4o
+2016-09-14 17:08 [CONFIG] saved configuration for LAYER4i
+2016-09-14 17:08 [MOUNT-MODULE] L: 13, Z: 6, Plan: M2105 (in BOX-4 T015 / 2), Scanned: M2105
+2016-09-14 17:08 [MOUNT-MODULE] OK: The module M2105 can be mounted here.
+2016-09-14 17:08 [MOUNT-MODULE] HUB-IDS: 23
+2016-09-14 17:10 [MOUNT-MODULE] DONE: mount module  -> M2105 plan: M2105
+2016-09-14 17:10 [CONFIG] saved configuration for LAYER1o
+2016-09-14 17:10 [CONFIG] saved configuration for LAYER1i
+2016-09-14 17:10 [CONFIG] saved configuration for LAYER2o
+2016-09-14 17:10 [CONFIG] saved configuration for LAYER2i
+2016-09-14 17:10 [CONFIG] saved configuration for LAYER3o
+2016-09-14 17:10 [CONFIG] saved configuration for LAYER3i
+2016-09-14 17:10 [CONFIG] saved configuration for LAYER4o
+2016-09-14 17:10 [CONFIG] saved configuration for LAYER4i
+2016-09-14 17:10 [MOUNT-MODULE] L: 13, Z: 5, Plan: M2237 (in BOX-4 T015 / 3), Scanned: M2237
+2016-09-14 17:10 [MOUNT-MODULE] OK: The module M2237 can be mounted here.
+2016-09-14 17:10 [MOUNT-MODULE] HUB-IDS: 24
+2016-09-14 17:11 [MOUNT-MODULE] DONE: mount module  -> M2237 plan: M2237
+2016-09-14 17:11 [CONFIG] saved configuration for LAYER1o
+2016-09-14 17:11 [CONFIG] saved configuration for LAYER1i
+2016-09-14 17:11 [CONFIG] saved configuration for LAYER2o
+2016-09-14 17:11 [CONFIG] saved configuration for LAYER2i
+2016-09-14 17:11 [CONFIG] saved configuration for LAYER3o
+2016-09-14 17:11 [CONFIG] saved configuration for LAYER3i
+2016-09-14 17:11 [CONFIG] saved configuration for LAYER4o
+2016-09-14 17:11 [CONFIG] saved configuration for LAYER4i
+2016-09-14 17:11 [MOUNT-MODULE] L: 13, Z: 4, Plan: M2161 (in BOX-4 T015 / 4), Scanned: M2161
+2016-09-14 17:11 [MOUNT-MODULE] OK: The module M2161 can be mounted here.
+2016-09-14 17:11 [MOUNT-MODULE] HUB-IDS: 25
+2016-09-14 17:12 [MOUNT-MODULE] DONE: mount module  -> M2161 plan: M2161
+2016-09-14 17:12 [CONFIG] saved configuration for LAYER1o
+2016-09-14 17:12 [CONFIG] saved configuration for LAYER1i
+2016-09-14 17:12 [CONFIG] saved configuration for LAYER2o
+2016-09-14 17:12 [CONFIG] saved configuration for LAYER2i
+2016-09-14 17:12 [CONFIG] saved configuration for LAYER3o
+2016-09-14 17:12 [CONFIG] saved configuration for LAYER3i
+2016-09-14 17:12 [CONFIG] saved configuration for LAYER4o
+2016-09-14 17:12 [CONFIG] saved configuration for LAYER4i
+2016-09-14 17:12 [MOUNT] Layer: LAYER2o, Ladder: L13-
+2016-09-14 17:12 [MOUNT] Currently installed modules: ----- ----- ----- -----  < 
+2016-09-14 17:12 [MOUNT-MODULE] L: 13, Z: 3, Plan: M2093 (in BOX-3 T016 / 4), Scanned: M2093
+2016-09-14 17:12 [MOUNT-MODULE] OK: The module M2093 can be mounted here.
+2016-09-14 17:12 [MOUNT-MODULE] HUB-IDS: 25
+2016-09-14 17:12 [MOUNT-MODULE] DONE: mount module  -> M2093 plan: M2093
+2016-09-14 17:12 [CONFIG] saved configuration for LAYER1o
+2016-09-14 17:12 [CONFIG] saved configuration for LAYER1i
+2016-09-14 17:12 [CONFIG] saved configuration for LAYER2o
+2016-09-14 17:12 [CONFIG] saved configuration for LAYER2i
+2016-09-14 17:12 [CONFIG] saved configuration for LAYER3o
+2016-09-14 17:12 [CONFIG] saved configuration for LAYER3i
+2016-09-14 17:12 [CONFIG] saved configuration for LAYER4o
+2016-09-14 17:12 [CONFIG] saved configuration for LAYER4i
+2016-09-14 17:12 [MOUNT-MODULE] L: 13, Z: 2, Plan: M2044 (in BOX-3 T016 / 3), Scanned: M2044
+2016-09-14 17:12 [MOUNT-MODULE] OK: The module M2044 can be mounted here.
+2016-09-14 17:12 [MOUNT-MODULE] HUB-IDS: 24
+2016-09-14 17:13 [MOUNT-MODULE] DONE: mount module  -> M2044 plan: M2044
+2016-09-14 17:13 [CONFIG] saved configuration for LAYER1o
+2016-09-14 17:13 [CONFIG] saved configuration for LAYER1i
+2016-09-14 17:13 [CONFIG] saved configuration for LAYER2o
+2016-09-14 17:13 [CONFIG] saved configuration for LAYER2i
+2016-09-14 17:13 [CONFIG] saved configuration for LAYER3o
+2016-09-14 17:13 [CONFIG] saved configuration for LAYER3i
+2016-09-14 17:13 [CONFIG] saved configuration for LAYER4o
+2016-09-14 17:13 [CONFIG] saved configuration for LAYER4i
+2016-09-14 17:13 [MOUNT-MODULE] L: 13, Z: 1, Plan: M2253 (in BOX-3 T016 / 2), Scanned: M2253
+2016-09-14 17:13 [MOUNT-MODULE] OK: The module M2253 can be mounted here.
+2016-09-14 17:13 [MOUNT-MODULE] HUB-IDS: 23
+2016-09-14 17:13 [MOUNT-MODULE] DONE: mount module  -> M2253 plan: M2253
+2016-09-14 17:13 [CONFIG] saved configuration for LAYER1o
+2016-09-14 17:13 [CONFIG] saved configuration for LAYER1i
+2016-09-14 17:13 [CONFIG] saved configuration for LAYER2o
+2016-09-14 17:13 [CONFIG] saved configuration for LAYER2i
+2016-09-14 17:13 [CONFIG] saved configuration for LAYER3o
+2016-09-14 17:13 [CONFIG] saved configuration for LAYER3i
+2016-09-14 17:13 [CONFIG] saved configuration for LAYER4o
+2016-09-14 17:13 [CONFIG] saved configuration for LAYER4i
+2016-09-14 17:14 [MOUNT-MODULE] L: 13, Z: 0, Plan: M2182 (in BOX-3 T016 / 1), Scanned: M2182
+2016-09-14 17:14 [MOUNT-MODULE] OK: The module M2182 can be mounted here.
+2016-09-14 17:14 [MOUNT-MODULE] HUB-IDS: 22
+2016-09-14 17:14 [MOUNT-MODULE] DONE: mount module  -> M2182 plan: M2182
+2016-09-14 17:14 [CONFIG] saved configuration for LAYER1o
+2016-09-14 17:14 [CONFIG] saved configuration for LAYER1i
+2016-09-14 17:14 [CONFIG] saved configuration for LAYER2o
+2016-09-14 17:14 [CONFIG] saved configuration for LAYER2i
+2016-09-14 17:14 [CONFIG] saved configuration for LAYER3o
+2016-09-14 17:14 [CONFIG] saved configuration for LAYER3i
+2016-09-14 17:14 [CONFIG] saved configuration for LAYER4o
+2016-09-14 17:14 [CONFIG] saved configuration for LAYER4i
+2016-09-14 17:17 [SEARCH] Search for module: M2247
+2016-09-14 17:18 [SEARCH] Search for module: M2046
+2016-09-14 17:21 [USER] Prepare modules M2247 to M2143 for Ladder 7
+2016-09-14 17:31 [USER] LADDER 13, +2, M2105, module fell to side while mounting
+2016-09-14 17:59 [USER] finished mounting LADDER 13
