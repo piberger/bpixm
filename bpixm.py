@@ -637,10 +637,10 @@ class BpixMountTool():
         ZPositionsString = ' '*15
 
         for ZPosition in range(MountingLayer.ZPositions):
-            ZPositionsString += ("Z%d-"%(MountingLayer.ZPositions - ZPosition - 1)).ljust(7)
-        ZPositionsString += '  '
+            ZPositionsString += ("Z%d-"%(MountingLayer.ZPositions - ZPosition )).ljust(7)
+        ZPositionsString += '     '
         for ZPosition in range(MountingLayer.ZPositions):
-            ZPositionsString += ("Z%d+"%(ZPosition)).ljust(7)
+            ZPositionsString += ("Z%d+"%(ZPosition+1)).ljust(7)
 
         print "|%s|"%(ZPositionsString.ljust((self.DisplayWidth-2)))
 
@@ -894,7 +894,10 @@ class BpixMountTool():
             print " LADDER:           %d"%(1+LadderIndex)
             print " PLANNED MODULE:   %s"%plannedModuleID
             print " STORAGE LOCATION: %s"%ModuleStorageLocation
-            question = "Scan module ID to replace '{old}' (plan {plan}): ".format(old=oldModuleID, plan=plannedModuleID)
+            if oldModuleID.startswith('-'):
+                question = "Scan module ID to mount here (plann: {plan}): ".format(plan=plannedModuleID)
+            else:
+                question = "Scan module ID to replace '{old}' (plan: {plan}): ".format(old=oldModuleID, plan=plannedModuleID)
             print question
 
             newModuleID = self.ReadModuleBarcode()
@@ -1033,6 +1036,11 @@ class BpixMountTool():
             print "filling modules from left to right"
             ModuleZPositions = range(HalfLadderIndex[1] * MountingLayer.ZPositions,
                                    (HalfLadderIndex[1] + 1) * MountingLayer.ZPositions)
+
+        elif self.FillDirection == 'righttoleft':
+            print "filling modules from right to left"
+            ModuleZPositions = list(reversed(range(HalfLadderIndex[1] * MountingLayer.ZPositions,
+                                   (HalfLadderIndex[1] + 1) * MountingLayer.ZPositions)))
 
         elif self.FillDirection == 'outwards':
             print "filling modules from inside (Z0) to outside (Z3)"
