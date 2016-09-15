@@ -467,12 +467,13 @@ class BpixMountTool():
         print " Z:        %s"%commentZPosition
         print " MODULE:   %s"%commentModule
         self.PrintBox("enter lines to write to log file, empty line to stop")
+        logComment = ''
         logString = raw_input()
         while len(logString.strip()) > 0:
-            self.Log(logString, Category='USER')
+            logComment += logString
             logString = raw_input()
 
-        logLine = '{Layer}/{Ladder}/{ZPosition}/{ModuleID}'.format(Layer=commentLayer, Ladder=commentLadder, ZPosition=commentZPosition, ModuleID=commentModule)
+        logLine = '{Layer}/{Ladder}/{ZPosition}/{ModuleID}: {Comment}'.format(Layer=commentLayer, Ladder=commentLadder, ZPosition=commentZPosition, ModuleID=commentModule, Comment=logComment)
         self.Log(logLine, 'MODULE-COMMENT')
 
     def getLastLine(self, fname, maxLineLength=80):
