@@ -337,6 +337,7 @@ class BpixMountTool():
                             ['hubids', 'View _hub IDs'],
                             ['search', 'Search module ID'],
                             ['log','Add _log entry'],
+                            ['mlog', 'Add log entry to specific module'],
                             ['save', 'Sa_ve configuration'],
                             ['step','Save configuration as new revision'],
                             ['revs','Sho_w revisions'],
@@ -362,6 +363,8 @@ class BpixMountTool():
                 self.EnterReplaceMenu()
             elif ret == 'log':
                 self.EnterLogMenu()
+            elif ret == 'mlog':
+                self.EnterModuleLogMenu()
             elif ret == 'revs':
                 self.EnterRevsMenu()
             elif ret == 'selectrevs':
@@ -410,6 +413,67 @@ class BpixMountTool():
             self.Log(logString, Category='USER')
             logString = raw_input()
 
+
+    def SelectSingleModule(self, selectTitle='select a module'):
+        self.UI.Clear()
+
+        # header
+        self.PrintBox(selectTitle)
+
+        ModuleChoices = []
+        MountingLayer = self.GetActiveMountingLayer()
+        for Ladder in MountingLayer.Modules:
+            LadderModules = []
+            for ModuleId in Ladder:
+                LadderModules.append(self.GetActiveMountingLayer().FormatModuleName(ModuleId))
+            ModuleChoices.append(LadderModules)
+
+        # Z positions
+        ZPositionsString = ' '*9
+        for ZPosition in range(self.Layers[self.ActiveLayer].ZPositions):
+            ZPositionsString += self.Layers[self.ActiveLayer].GetZPositionName(ZPosition).ljust(9)
+        for ZPosition in range(self.Layers[self.ActiveLayer].ZPositions, 2*self.Layers[self.ActiveLayer].ZPositions):
+            ZPositionsString += self.Layers[self.ActiveLayer].GetZPositionName(ZPosition).ljust(9)
+        print ZPositionsString
+
+        # half ladders
+        HalfLadderChoices = []
+        HeaderColumn = []
+
+        LadderIndex = 1
+        for Ladder in MountingLayer.Modules:
+            HeaderColumn.append(("L%d"%LadderIndex).ljust(5))
+            LadderIndex += 1
+
+        # ask user to pick a half ladder
+        selectedModuleIndex = self.UI.AskUser2D('', ModuleChoices, HeaderColumn=HeaderColumn)
+
+        # [0] = ladderIndex = Ladder Number from 0...#-1
+        # [1] = zIndex = 0...7 from minus side to plus side
+        return selectedModuleIndex
+
+
+    def EnterModuleLogMenu(self):
+        modulePosition = self.SelectSingleModule("select module to add comment")
+        commentLayer = self.ActiveLayer
+        commentLadder = self.GetActiveMountingLayer().GetLadderName(modulePosition[0])
+        commentZPosition = self.GetActiveMountingLayer().GetZPositionName(modulePosition[1])
+        try:
+            commentModule = self.GetActiveMountingLayer().Modules[modulePosition[0]][modulePosition[1]]
+        except:
+            commentModule = '----'
+        print " LAYER:    %s"%commentLayer
+        print " LADDER:   %s"%commentLadder
+        print " Z:        %s"%commentZPosition
+        print " MODULE:   %s"%commentModule
+        self.PrintBox("enter lines to write to log file, empty line to stop")
+        logString = raw_input()
+        while len(logString.strip()) > 0:
+            self.Log(logString, Category='USER')
+            logString = raw_input()
+
+        logLine = '{Layer}/{Ladder}/{ZPosition}/{ModuleID}'.format(Layer=commentLayer, Ladder=commentLadder, ZPosition=commentZPosition, ModuleID=commentModule)
+        self.Log(logLine, 'MODULE-COMMENT')
 
     def getLastLine(self, fname, maxLineLength=80):
         fp = file(fname, "rb")

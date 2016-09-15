@@ -63,6 +63,8 @@ class BpixLayer:
         else:
             return ("Z%d+" % (ZPosition-self.ZPositions+1)).ljust(self.ZPositionNameLength)
 
+    def GetLadderName(self, LadderIndex):
+        return "%d"%(LadderIndex+1)
 
     def CheckModuleName(self, ModuleName):
         if ModuleName[0] != 'M':
