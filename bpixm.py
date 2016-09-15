@@ -215,7 +215,7 @@ class BpixMountTool():
             if self.LayersMounted[LayerName].SaveAs(layerMountFileName):
                 if PrintOutput:
                     print "saved configuration for ", LayerName
-                self.Log("saved configuration for %s"%LayerName, "CONFIG")
+                    self.Log("saved configuration for %s"%LayerName, "CONFIG")
             else:
                 self.ShowError("could not save configuration for %s"%LayerName)
                 Success = False
@@ -237,7 +237,7 @@ class BpixMountTool():
         oldRevision = self.globalConfig.get('System', 'DataRevision')
 
         try:
-            dataDirectories = [x.strip('/').split('/')[-1] for x in glob.glob(self.dataDirectoryBase + '*/')]
+            dataDirectories = [x.replace('\\','/').strip('/').split('/')[-1] for x in glob.glob(self.dataDirectoryBase + '*/')]
             nextRevision = 1 + max([int(x) for x in dataDirectories if x.isdigit()])
             dataDirectoryNew = self.dataDirectoryBase + '%d/'%nextRevision
         except:
