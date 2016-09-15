@@ -845,20 +845,30 @@ class BpixMountTool():
 
         success = False
         try:
+            if ZPosition < MountingLayer.ZPositions:
+                ZPositionFormatted = "-%d"%(MountingLayer.ZPositions - ZPosition)
+            else:
+                ZPositionFormatted = "+%d"%(ZPosition - MountingLayer.ZPositions)
+
             if len(MountingLayer.Modules[LadderIndex][ZPosition]) < 1:
                 logString = "DONE: mount module  -> " + newModuleID
             else:
                 logString = "DONE: replace module " + MountingLayer.Modules[LadderIndex][ZPosition] + ' -> ' + newModuleID
+
+            logString = logString + " at ladder %d"%(LadderIndex+1) + " Z =" + ZPositionFormatted
+
             if PlannedLayer:
                 plannedModule = PlannedLayer.Modules[LadderIndex][ZPosition]
                 logString += ' plan: ' + plannedModule
+
+            logString = logString + " operator: " + self.Operator
             try:
                 MountingLayer.Modules[LadderIndex][ZPosition] = newModuleID
                 success = True
             except:
                 logString = "FAILED: mount module  -> " + newModuleID
         except:
-            pass
+            logString = "ERROR IN CREATING LOG"
 
         self.Log(logString, 'MOUNT-MODULE')
         return success

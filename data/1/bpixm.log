@@ -632,3 +632,28 @@
 2016-09-14 17:21 [USER] Prepare modules M2247 to M2143 for Ladder 7
 2016-09-14 17:31 [USER] LADDER 13, +2, M2105, module fell to side while mounting
 2016-09-14 17:59 [USER] finished mounting LADDER 13
+2016-09-15 10:38 [START] --------------------------------------------------------------------------------
+2016-09-15 10:38 [START] started, operator: Pirmin
+2016-09-15 10:38 [START] --------------------------------------------------------------------------------
+2016-09-15 10:38 [MOUNT-REPLACE] Layer: LAYER2o, Ladder: 2 Z: 2
+2016-09-15 10:38 [MOUNT-MODULE] L: 3, Z: 2, Plan: M2073 (in BOX-3 T003 / 5), Scanned: M2073
+2016-09-15 10:38 [MOUNT-MODULE] OK: The module M2073 can be mounted here.
+2016-09-15 10:38 [MOUNT-MODULE] HUB-IDS: 24
+2016-09-15 10:38 [MOUNT-MODULE] DONE: mount module  -> M2073 at ladder 3 Z =-2 at operator: Pirmin plan: M2073
+2016-09-15 10:41 [START] --------------------------------------------------------------------------------
+2016-09-15 10:41 [START] started, operator: Pirmin
+2016-09-15 10:41 [START] --------------------------------------------------------------------------------
+2016-09-15 10:41 [MOUNT-REPLACE] Layer: LAYER2o, Ladder: 2 Z: 2
+2016-09-15 10:41 [MOUNT-MODULE] L: 3, Z: 2, Plan: M2073 (in BOX-3 T003 / 5), Scanned: M9999
+2016-09-15 10:41 [MOUNT-MODULE] OK: The module M9999 can be mounted here.
+2016-09-15 10:41 [WARNING] planning to mount module 'M9999' instead of 'M2073' at position z=Z2-   
+2016-09-15 10:41 [WARNING] Storage location for module M9999 is unknown, this module ID might not exist, please check!
+2016-09-15 10:41 [MOUNT-MODULE] HUB-IDS: 24
+2016-09-15 10:41 [MOUNT-MODULE] DONE: replace module M2073 -> M9999 at ladder 3 Z =-2 plan: M2073 operator: Pirmin
+2016-09-15 10:41 [MOUNT-REPLACE] Layer: LAYER2o, Ladder: 2 Z: 2
+2016-09-15 10:41 [MOUNT-MODULE] L: 3, Z: 2, Plan: M2073 (in BOX-3 T003 / 5), Scanned: 
+2016-09-15 10:41 [MOUNT-MODULE] OK: The module  can be mounted here.
+2016-09-15 10:41 [WARNING] planning to mount module '' instead of 'M2073' at position z=Z2-   
+2016-09-15 10:41 [WARNING] Storage location for module  is unknown, this module ID might not exist, please check!
+2016-09-15 10:41 [MOUNT-MODULE] HUB-IDS: 24
+2016-09-15 10:41 [MOUNT-MODULE] DONE: replace module M9999 ->  at ladder 3 Z =-2 plan: M2073 operator: Pirmin
