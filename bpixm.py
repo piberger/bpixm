@@ -457,7 +457,7 @@ class BpixMountTool():
         modulePosition = self.SelectSingleModule("select module to add comment")
         commentLayer = self.ActiveLayer
         commentLadder = self.GetActiveMountingLayer().GetLadderName(modulePosition[0])
-        commentZPosition = self.GetActiveMountingLayer().GetZPositionName(modulePosition[1])
+        commentZPosition = self.GetActiveMountingLayer().GetZPositionNameRaw(modulePosition[1])
         try:
             commentModule = self.GetActiveMountingLayer().Modules[modulePosition[0]][modulePosition[1]]
         except:
@@ -467,12 +467,13 @@ class BpixMountTool():
         print " Z:        %s"%commentZPosition
         print " MODULE:   %s"%commentModule
         self.PrintBox("enter lines to write to log file, empty line to stop")
-        logComment = ''
+        logComments = []
         logString = raw_input()
         while len(logString.strip()) > 0:
-            logComment += logString
+            logComments.append(logString)
             logString = raw_input()
 
+        logComment = ', '.join(logComments)
         logLine = '{Layer}/{Ladder}/{ZPosition}/{ModuleID}: {Comment}'.format(Layer=commentLayer, Ladder=commentLadder, ZPosition=commentZPosition, ModuleID=commentModule, Comment=logComment)
         self.Log(logLine, 'MODULE-COMMENT')
 

@@ -63,6 +63,12 @@ class BpixLayer:
         else:
             return ("Z%d+" % (ZPosition-self.ZPositions+1)).ljust(self.ZPositionNameLength)
 
+    def GetZPositionNameRaw(self, ZPosition):
+        if ZPosition < self.ZPositions:
+            return ("Z%d-" % (self.ZPositions - ZPosition))
+        else:
+            return ("Z%d+" % (ZPosition-self.ZPositions+1))
+
     def GetLadderName(self, LadderIndex):
         return "%d"%(LadderIndex+1)
 
