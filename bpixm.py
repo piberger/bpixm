@@ -950,8 +950,10 @@ class BpixMountTool():
     def EnterMountSingleModuleMenu(self, MountingLayer, LadderIndex, ZPosition, PlannedLayer = None):
         oldModuleID = MountingLayer.FormatModuleName(MountingLayer.Modules[LadderIndex][ZPosition])
 
+        plannedModuleIDraw = PlannedLayer.Modules[LadderIndex][ZPosition].strip()
+        plannedModuleFound = len(plannedModuleIDraw) > 1
         try:
-            plannedModuleID = PlannedLayer.FormatModuleName(PlannedLayer.Modules[LadderIndex][ZPosition])
+            plannedModuleID = PlannedLayer.FormatModuleName(plannedModuleIDraw)
         except:
             plannedModuleID = 'M????'
 
@@ -971,9 +973,12 @@ class BpixMountTool():
             print " PLANNED MODULE:   %s"%plannedModuleID
             print " STORAGE LOCATION: %s"%ModuleStorageLocation
             if oldModuleID.startswith('-'):
-                question = "Scan module ID to mount here (plann: {plan}): ".format(plan=plannedModuleID)
+                if plannedModuleFound:
+                    question = "Scan module ID to mount here, plan: {plan} (\x1b[31mq\x1b[0m to quit): ".format(plan=plannedModuleID)
+                else:
+                    question = "Scan module ID to mount here (\x1b[31mq\x1b[0m to quit): "
             else:
-                question = "Scan module ID to replace '{old}' (plan: {plan}): ".format(old=oldModuleID, plan=plannedModuleID)
+                question = "Scan module ID to replace '{old}', plan: {plan} (\x1b[31mq\x1b[0m to quit): ".format(old=oldModuleID, plan=plannedModuleID)
             print question
 
             newModuleID = self.ReadModuleBarcode()
@@ -991,7 +996,7 @@ class BpixMountTool():
             if isMountable:
                 self.Log("OK: The module {ModuleID} can be mounted here.".format(ModuleID=newModuleID), Category="MOUNT-MODULE")
                 # check if it was _planned_ to mount the module here
-                if newModuleID != plannedModuleID:
+                if plannedModuleFound and newModuleID != plannedModuleID:
                     warningMessage = "planning to mount module '%s' instead of '%s' at position z=%s" % (
                         newModuleID, plannedModuleID, MountingLayer.GetZPositionName(ZPosition))
                     self.ShowWarning(warningMessage)
